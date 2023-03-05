@@ -1,0 +1,11 @@
+1.a: получить исполняемый файл
+---> gcc hello.c -o hello.exec
+
+1.b: посмотреть unresolved symbols (puts, printf) с помощью nm
+---> nm hello.exec | grep "U "
+
+1.c: посмотреть зависимости (ldd)
+---> ldd hello.exec
+
+1.d: запустить
+---> ./hello.exec
