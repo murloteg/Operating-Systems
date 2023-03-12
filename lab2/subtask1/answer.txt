@@ -1,0 +1,14 @@
+1.a.1: чем обусловлено большое кол-во системных вызовов? Какой syscall используется для вывода "Hello, World!"?
+---> функция printf является оберткой для syscall'а write.
+Его синтаксис следующий: write(int fd, const void* buf, size_t count).
+В моём случае: fd = 1 [stdin], buf = "Hello, World!\n", count = 14.
+
+
+1.a.2: убедиться, что явный вызов syscall'а write() присутствует в выводе strace.
+---> write(1, "Hello, World!\n", 14Hello, World!
+     )         = 14
+
+
+1.a.3: аналогично, проверить вывод strace.
+write(1, "Hello, World!\n", 14Hello, World!
+)         = 14
