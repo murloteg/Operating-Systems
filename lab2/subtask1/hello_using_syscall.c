@@ -5,6 +5,9 @@ enum Consts {
 };
 
 int main() {
-    write(STDIN, "Hello, World!\n", 14);
+    int status = write(STDIN, "Hello, World!\n", 14);
+    if (status == -1) {
+        return -1;
+    }
     return 0;
 }
