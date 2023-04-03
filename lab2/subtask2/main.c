@@ -12,9 +12,8 @@ ssize_t call_write(int fileDescriptor, const void* buffer, size_t countOfBytes) 
     int syscallStatus = 0;
     asm volatile (
             "syscall"
-            : "=a" (syscallStatus) /* output operands */
-            : "a" (SYS_write), "D" (fileDescriptor), "S" (buffer), "d" (countOfBytes) /* input operands */
-            : "rcx" /* clobbered-list */
+            : "=a" (syscallStatus)
+            : "a" (SYS_write), "D" (fileDescriptor), "S" (buffer), "d" (countOfBytes)
             );
 
     if (syscallStatus < 0) {
@@ -27,9 +26,9 @@ ssize_t call_write(int fileDescriptor, const void* buffer, size_t countOfBytes) 
 int main() {
     size_t countOfBytes = 14;
     char* message = "Hello, world!\n";
-    ssize_t isSuccessfulCalling = call_write(STDOUT_FILENO, message, countOfBytes);
 
-    if (isSuccessfulCalling == SOMETHING_WENT_WRONG) {
+    ssize_t syscallWriteStatus = call_write(STDOUT_FILENO, message, countOfBytes);
+    if (syscallWriteStatus == SOMETHING_WENT_WRONG) {
         perror("Error");
         return EXIT_FAILURE;
     }
