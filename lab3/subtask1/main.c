@@ -117,6 +117,7 @@ char* prepare_file_path(char* directoryPath, char* fileName) {
     if (totalFilePath == NULL) {
         return NULL;
     }
+    totalFilePath = memset(totalFilePath, '\0', totalLengthOfFilePath);
 
     char delimiterSymbol = '/';
     totalFilePath = strncpy(totalFilePath, directoryPath, lengthOfDirectoryPath);
@@ -211,6 +212,7 @@ char* prepare_subdirectory_path(char* directoryPath, char* subdirectoryName) {
         fprintf(stderr, "Not enough of memory!");
         return NULL;
     }
+    subdirectoryPath = memset(subdirectoryPath, '\0', totalLengthOfSubdirectoryPath);
 
     char delimiterSymbol = '/';
     subdirectoryPath = strncpy(subdirectoryPath, directoryPath, lengthOfDirectoryPath);
@@ -283,7 +285,7 @@ enum DirectoryErrors copy_all_content_of_directory(char* directoryPath, char* di
     }
 
     enum DirectoryErrors closingStatus = close_opened_directories(openedOriginDirectory, openedReversedDirectory);
-    if (copyStatus != OK) {
+    if (copyStatus != SUCCESSFULLY_COPIED) {
         return CONTENT_COPY_ERROR;
     }
     return closingStatus;
