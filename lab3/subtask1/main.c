@@ -59,7 +59,7 @@ char* find_dir_name_in_path(char* dir_path) {
     return (dir_name_position == NULL) ? NULL : dir_name_position + 1;
 }
 
-ssize_t calculate_absolute_path_without_directory_length(char* dir_path) {
+ssize_t get_absolute_path_without_dir_length(char* dir_path) {
     char* dir_name_position = find_dir_name_in_path(dir_path);
     if (dir_name_position == NULL) {
         return DIRECTORY_NAME_NOT_FOUND;
@@ -69,8 +69,8 @@ ssize_t calculate_absolute_path_without_directory_length(char* dir_path) {
     return (ssize_t) (absolute_path_length - dir_name_length);
 }
 
-enum directory_errors create_directory_with_reversed_name(char* dir_path, char* dir_path_with_reversed_name) {
-    ssize_t absolute_path_without_name_length = calculate_absolute_path_without_directory_length(dir_path);
+enum directory_errors create_dir_with_reversed_name(char* dir_path, char* dir_path_with_reversed_name) {
+    ssize_t absolute_path_without_name_length = get_absolute_path_without_dir_length(dir_path);
     if (absolute_path_without_name_length == DIRECTORY_NAME_NOT_FOUND) {
         fprintf(stderr, "Cannot find directory name in input path!");
         return DIRECTORY_NAME_NOT_FOUND;
@@ -95,7 +95,7 @@ enum directory_errors create_directory_with_reversed_name(char* dir_path, char* 
     return OK;
 }
 
-enum directory_errors is_this_directory_existing(char* dir_path) {
+enum directory_errors is_this_dir_existing(char* dir_path) {
     DIR* opened_dir = opendir(dir_path);
     if (opened_dir == NULL) {
         fprintf(stderr, "Directory does not exist!");
@@ -155,8 +155,8 @@ void backward_copying_files(FILE* input_file, FILE* output_file) {
             return;
         }
 
-        size_t return_code = fread(reading_buffer, sizeof(char), count_of_reading_symbols, input_file);
-        if (return_code < count_of_reading_symbols) {
+        size_t return_read_code = fread(reading_buffer, sizeof(char), count_of_reading_symbols, input_file);
+        if (return_read_code < count_of_reading_symbols) {
             fprintf(stderr, "Incorrect reading from file!");
             return;
         }
@@ -215,7 +215,7 @@ bool is_available_subdir_name(char* subdir_name) {
             (subdir_name_length == strlen("..") && (strstr(subdir_name, "..") != NULL)));
 }
 
-char* prepare_subdirectory_path(char* dir_path, char* subdir_name) {
+char* prepare_subdir_path(char* dir_path, char* subdir_name) {
     if (!is_available_subdir_name(subdir_name)) {
         return NULL;
     }
@@ -239,9 +239,9 @@ char* prepare_subdirectory_path(char* dir_path, char* subdir_name) {
     return merged_subdir_path;
 }
 
-enum statuses_of_copy create_reversed_subdirectory(char* dir_path_with_reversed_name, char* subdir_name, char* subdir_path_with_reversed_name) {
-    char* subdir_path = prepare_subdirectory_path(dir_path_with_reversed_name, subdir_name);
-    enum directory_errors creation_status = create_directory_with_reversed_name(subdir_path, subdir_path_with_reversed_name);
+enum statuses_of_copy create_reversed_subdir(char* dir_path_with_reversed_name, char* subdir_name, char* subdir_path_with_reversed_name) {
+    char* subdir_path = prepare_subdir_path(dir_path_with_reversed_name, subdir_name);
+    enum directory_errors creation_status = create_dir_with_reversed_name(subdir_path, subdir_path_with_reversed_name);
     if (creation_status != OK) {
         return FAILED_COPIED;
     }
@@ -262,7 +262,7 @@ enum directory_errors close_opened_directories(DIR* openedOriginDirectory, DIR* 
     return OK;
 }
 
-enum directory_errors copy_all_content_of_directory(char* dir_path, char* dir_path_with_reversed_name) {
+enum directory_errors copy_all_content_of_dir(char* dir_path, char* dir_path_with_reversed_name) {
     DIR* opened_origin_dir = opendir(dir_path);
     DIR* opened_reversed_dir = opendir(dir_path_with_reversed_name);
     if (opened_origin_dir == NULL || opened_reversed_dir == NULL) {
@@ -281,16 +281,16 @@ enum directory_errors copy_all_content_of_directory(char* dir_path, char* dir_pa
             }
         } else if (dir_entry->d_type == DT_DIR) {
             char* subdir_name = dir_entry->d_name;
-            char* subdir_path = prepare_subdirectory_path(dir_path, subdir_name);
+            char* subdir_path = prepare_subdir_path(dir_path, subdir_name);
             if (subdir_path != NULL) {
                 size_t subdir_path_with_reversed_name_length = strlen(dir_path_with_reversed_name) + strlen(subdir_name);
                 char subdir_path_with_reversed_name[subdir_path_with_reversed_name_length];
-                copy_status = create_reversed_subdirectory(dir_path_with_reversed_name, subdir_name, subdir_path_with_reversed_name);
+                copy_status = create_reversed_subdir(dir_path_with_reversed_name, subdir_name, subdir_path_with_reversed_name);
                 if (copy_status != SUCCESSFULLY_COPIED) {
                     free(subdir_path);
                     break;
                 }
-                enum directory_errors subdir_copied_status = copy_all_content_of_directory(subdir_path, subdir_path_with_reversed_name);
+                enum directory_errors subdir_copied_status = copy_all_content_of_dir(subdir_path, subdir_path_with_reversed_name);
                 if (subdir_copied_status != OK) {
                     free(subdir_path);
                     return CONTENT_COPY_ERROR;
@@ -315,19 +315,19 @@ int main(int argc, char** argv) {
     }
 
     char* dir_path = argv[1];
-    enum directory_errors existing_status = is_this_directory_existing(dir_path);
+    enum directory_errors existing_status = is_this_dir_existing(dir_path);
     if (existing_status != OK) {
         return EXIT_FAILURE;
     }
 
     size_t dir_path_length = strlen(dir_path);
     char dir_path_with_reversed_name[dir_path_length];
-    enum directory_errors creation_status = create_directory_with_reversed_name(dir_path, dir_path_with_reversed_name);
+    enum directory_errors creation_status = create_dir_with_reversed_name(dir_path, dir_path_with_reversed_name);
     if (creation_status != OK) {
         return EXIT_FAILURE;
     }
 
-    enum directory_errors copy_status = copy_all_content_of_directory(dir_path, dir_path_with_reversed_name);
+    enum directory_errors copy_status = copy_all_content_of_dir(dir_path, dir_path_with_reversed_name);
     if (copy_status != OK) {
         return EXIT_FAILURE;
     }
