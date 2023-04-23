@@ -5,15 +5,15 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-enum Consts {
+enum general_consts {
     NUMBER_OF_REQUIRED_ARGS = 2 /* program name and path to directory */
 };
 
-enum PermissionModes {
+enum permission_modes {
     READ_WRITE_EXECUTE = 0777
 };
 
-enum DirectoryErrors {
+enum directory_errors {
     OK = 0,
     DIRECTORY_DOESNT_EXIST = 1,
     CONTENT_COPY_ERROR = 2,
@@ -22,217 +22,234 @@ enum DirectoryErrors {
     DIRECTORY_WAS_NOT_CREATED = -1
 };
 
-enum StatusesOfCopy {
+enum statuses_of_copy {
     SUCCESSFULLY_COPIED = 0,
     CANNOT_OPEN_FILE = 1,
     MEMORY_ALLOCATION_ERROR = 2,
     FAILED_COPIED = 3
 };
 
-enum UtilConsts {
-    BUFFER_SIZE = 2048
+enum util_consts {
+    BUFFER_SIZE = 512,
+    SOMETHING_WENT_WRONG = -1
 };
 
-void swap(char* firstChar, char* secondChar) {
-    char temporaryCharacter = *firstChar;
-    *firstChar = *secondChar;
-    *secondChar = temporaryCharacter;
+void swap(char* first_char, char* second_char) {
+    char temporary_char = *first_char;
+    *first_char = *second_char;
+    *second_char = temporary_char;
 }
 
-void reverse_string(char* originString, char* reversedString) {
-    size_t lengthOfString = strlen(originString);
-    reversedString = strcpy(reversedString, originString);
-    for (int i = 0; i < lengthOfString / 2; ++i) {
-        swap(&reversedString[i], &reversedString[lengthOfString - i - 1]);
+void reverse_string(char* origin_string, char* reversed_string) {
+    size_t string_length = strlen(origin_string);
+    reversed_string = strcpy(reversed_string, origin_string);
+    for (int i = 0; i < string_length / 2; ++i) {
+        swap(&reversed_string[i], &reversed_string[string_length - i - 1]);
     }
 }
 
-void find_absolute_path_without_directory_name(char* absolutePathWithoutName, char* directoryPath, ssize_t lengthOfAbsolutePathWithoutName) {
-    absolutePathWithoutName = strncpy(absolutePathWithoutName, directoryPath, lengthOfAbsolutePathWithoutName);
-    absolutePathWithoutName[lengthOfAbsolutePathWithoutName] = '\0';
+void find_absolute_path_without_dir_name(char* absolute_path_without_name, char* dir_path, ssize_t absolute_path_without_name_length) {
+    absolute_path_without_name = strncpy(absolute_path_without_name, dir_path, absolute_path_without_name_length);
+    absolute_path_without_name[absolute_path_without_name_length] = '\0';
 }
 
-char* find_directory_name_in_path(char* directoryPath) {
-    char findingSymbol = '/';
-    char* directoryNamePosition = strrchr(directoryPath, findingSymbol);
-    return (directoryNamePosition == NULL) ? NULL : directoryNamePosition + 1;
+char* find_dir_name_in_path(char* dir_path) {
+    char finding_symbol = '/';
+    char* dir_name_position = strrchr(dir_path, finding_symbol);
+    return (dir_name_position == NULL) ? NULL : dir_name_position + 1;
 }
 
-ssize_t calculate_length_of_absolute_path_without_directory_name(char* directoryPath) {
-    char* directoryNamePosition = find_directory_name_in_path(directoryPath);
-    if (directoryNamePosition == NULL) {
+ssize_t calculate_absolute_path_without_directory_length(char* dir_path) {
+    char* dir_name_position = find_dir_name_in_path(dir_path);
+    if (dir_name_position == NULL) {
         return DIRECTORY_NAME_NOT_FOUND;
     }
-    size_t absolutePathSize = strlen(directoryPath);
-    size_t directoryNameSize = strlen(directoryNamePosition);
-    return (ssize_t) (absolutePathSize - directoryNameSize);
+    size_t absolute_path_length = strlen(dir_path);
+    size_t dir_name_length = strlen(dir_name_position);
+    return (ssize_t) (absolute_path_length - dir_name_length);
 }
 
-enum DirectoryErrors create_directory_with_reversed_name(char* directoryPath, char* directoryPathWithReversedName) {
-    ssize_t lengthOfAbsolutePathWithoutName = calculate_length_of_absolute_path_without_directory_name(directoryPath);
-    if (lengthOfAbsolutePathWithoutName == DIRECTORY_NAME_NOT_FOUND) {
+enum directory_errors create_directory_with_reversed_name(char* dir_path, char* dir_path_with_reversed_name) {
+    ssize_t absolute_path_without_name_length = calculate_absolute_path_without_directory_length(dir_path);
+    if (absolute_path_without_name_length == DIRECTORY_NAME_NOT_FOUND) {
         fprintf(stderr, "Cannot find directory name in input path!");
         return DIRECTORY_NAME_NOT_FOUND;
     }
 
-    char absolutePathWithoutName[lengthOfAbsolutePathWithoutName];
-    find_absolute_path_without_directory_name(absolutePathWithoutName, directoryPath, lengthOfAbsolutePathWithoutName);
+    char absolute_path_without_name[absolute_path_without_name_length];
+    find_absolute_path_without_dir_name(absolute_path_without_name, dir_path, absolute_path_without_name_length);
 
     /* Previous steps ensures that the directory name exists */
-    char* directoryName = find_directory_name_in_path(directoryPath);
-    size_t lengthOfDirectoryName = strlen(directoryName);
-    char reversedDirectoryName[lengthOfDirectoryName];
-    reverse_string(directoryName, reversedDirectoryName);
+    char* dir_name = find_dir_name_in_path(dir_path);
+    size_t dir_name_length = strlen(dir_name);
+    char reversed_dir_name[dir_name_length];
+    reverse_string(dir_name, reversed_dir_name);
 
-    char* newDirectoryPath = strcat(absolutePathWithoutName, reversedDirectoryName);
-    enum DirectoryErrors creationStatus = mkdir(newDirectoryPath, READ_WRITE_EXECUTE);
-    if (creationStatus == DIRECTORY_WAS_NOT_CREATED) {
+    char* new_dir_path = strcat(absolute_path_without_name, reversed_dir_name);
+    enum directory_errors creation_status = mkdir(new_dir_path, READ_WRITE_EXECUTE);
+    if (creation_status == DIRECTORY_WAS_NOT_CREATED) {
         fprintf(stderr, "Directory was not created!");
         return DIRECTORY_WAS_NOT_CREATED;
     }
-    directoryPathWithReversedName = strcpy(directoryPathWithReversedName, newDirectoryPath);
+    dir_path_with_reversed_name = strcpy(dir_path_with_reversed_name, new_dir_path);
     return OK;
 }
 
-enum DirectoryErrors is_this_directory_existing(char* directoryPath) {
-    DIR* openedDirectory = opendir(directoryPath);
-    if (openedDirectory == NULL) {
+enum directory_errors is_this_directory_existing(char* dir_path) {
+    DIR* opened_dir = opendir(dir_path);
+    if (opened_dir == NULL) {
         fprintf(stderr, "Directory does not exist!");
         return DIRECTORY_DOESNT_EXIST;
     }
 
-    enum DirectoryErrors closingStatus = closedir(openedDirectory);
-    if (closingStatus == FAILED_DIRECTORY_CLOSING) {
+    enum directory_errors closing_status = closedir(opened_dir);
+    if (closing_status == FAILED_DIRECTORY_CLOSING) {
         fprintf(stderr, "Cannot closing the directory!");
     }
-    return closingStatus;
+    return closing_status;
 }
 
-char* prepare_file_path(char* directoryPath, char* fileName) {
-    size_t lengthOfDirectoryPath = strlen(directoryPath);
-    size_t lengthOfFileName = strlen(fileName);
+char* prepare_file_path(char* dir_path, char* file_name) {
+    size_t dir_path_length = strlen(dir_path);
+    size_t file_name_length = strlen(file_name);
 
-    size_t totalLengthOfFilePath = lengthOfDirectoryPath + lengthOfFileName + 2;
-    char* totalFilePath = (char*) malloc(totalLengthOfFilePath * sizeof(char));
-    if (totalFilePath == NULL) {
+    size_t merged_path_length = dir_path_length + file_name_length + 2;
+    char* merged_file_path = (char*) malloc(merged_path_length * sizeof(char));
+    if (merged_file_path == NULL) {
         return NULL;
     }
-    totalFilePath = memset(totalFilePath, '\0', totalLengthOfFilePath);
+    merged_file_path = memset(merged_file_path, '\0', merged_path_length);
 
-    char delimiterSymbol = '/';
-    totalFilePath = strncpy(totalFilePath, directoryPath, lengthOfDirectoryPath);
-    totalFilePath[lengthOfDirectoryPath] = delimiterSymbol;
+    char delimiter_symbol = '/';
+    merged_file_path = strncpy(merged_file_path, dir_path, dir_path_length);
+    merged_file_path[dir_path_length] = delimiter_symbol;
 
-    totalFilePath = strncat(totalFilePath, fileName, lengthOfFileName);
-    return totalFilePath;
+    merged_file_path = strncat(merged_file_path, file_name, file_name_length);
+    return merged_file_path;
 }
 
-void backward_copying_files(FILE* inputFile, FILE* outputFile) {
-    fseek(inputFile, 0, SEEK_END);
-    long fileSize = ftell(inputFile);
-    char readingBuffer[BUFFER_SIZE];
+void backward_copying_files(FILE* input_file, FILE* output_file) {
+    int seeking_status = fseek(input_file, 0, SEEK_END);
+    if (seeking_status == SOMETHING_WENT_WRONG) {
+        fprintf(stderr, "Failed copying!");
+        return;
+    }
+    long file_position = ftell(input_file);
+    if (file_position == SOMETHING_WENT_WRONG) {
+        fprintf(stderr, "Failed copying!");
+        return;
+    }
+    
+    char reading_buffer[BUFFER_SIZE];
+    long current_offset_from_end = 0;
+    while (file_position > 0) {
+        long count_of_reading_symbols = BUFFER_SIZE;
+        if (count_of_reading_symbols > file_position) {
+            count_of_reading_symbols = file_position;
+        }
 
-    while (fileSize > 0) {
-        long readSize = BUFFER_SIZE;
-        if (readSize > fileSize) {
-            readSize = fileSize;
+        current_offset_from_end += count_of_reading_symbols;
+        seeking_status = fseek(input_file, -current_offset_from_end, SEEK_END);
+        if (seeking_status == SOMETHING_WENT_WRONG) {
+            fprintf(stderr, "Failed copying!");
+            return;
         }
-        fseek(inputFile, -readSize, SEEK_CUR);
-        fread(readingBuffer, 1, readSize, inputFile);
-        for (long i = readSize - 1; i >= 0; --i) {
-            fprintf(outputFile, "%c", readingBuffer[i]);
+
+        size_t return_code = fread(reading_buffer, sizeof(char), count_of_reading_symbols, input_file);
+        if (return_code < count_of_reading_symbols) {
+            fprintf(stderr, "Incorrect reading from file!");
+            return;
         }
-        fileSize -= readSize;
+
+        for (long i = count_of_reading_symbols - 1; i >= 0; --i) {
+            fprintf(output_file, "%c", reading_buffer[i]);
+        }
+        file_position -= count_of_reading_symbols;
     }
 }
 
-enum StatusesOfCopy copy_file_content(char* directoryPath, char* fileName, char* directoryPathWithReversedName) {
-    char* filePath = prepare_file_path(directoryPath, fileName);
-    if (filePath == NULL) {
+enum statuses_of_copy copy_file_content(char* dir_path, char* file_name, char* dir_path_with_reversed_name) {
+    char* file_path = prepare_file_path(dir_path, file_name);
+    if (file_path == NULL) {
         fprintf(stderr, "Not enough of memory!");
         return MEMORY_ALLOCATION_ERROR;
     }
 
-    size_t lengthOfFileName = strlen(fileName);
-    char reversedFileName[lengthOfFileName];
-    reverse_string(fileName, reversedFileName);
-    char* reversedFilePath = prepare_file_path(directoryPathWithReversedName, reversedFileName);
-    if (reversedFilePath == NULL) {
-        free(filePath);
+    size_t file_name_length = strlen(file_name);
+    char reversed_file_name[file_name_length];
+    reverse_string(file_name, reversed_file_name);
+    char* reversed_file_path = prepare_file_path(dir_path_with_reversed_name, reversed_file_name);
+    if (reversed_file_path == NULL) {
+        free(file_path);
         fprintf(stderr, "Not enough of memory!");
         return MEMORY_ALLOCATION_ERROR;
     }
 
-    FILE* inputFile = fopen(filePath, "r");
-    if (inputFile == NULL) {
-        free(filePath);
-        free(reversedFilePath);
+    FILE* input_file = fopen(file_path, "rb");
+    if (input_file == NULL) {
+        free(file_path);
+        free(reversed_file_path);
         fprintf(stderr, "Invalid file path!");
         return CANNOT_OPEN_FILE;
     }
-    free(filePath);
+    free(file_path);
 
-    FILE* outputFile = fopen(reversedFilePath, "w");
-    if (outputFile == NULL) {
-        free(reversedFilePath);
-        fclose(inputFile);
+    FILE* output_file = fopen(reversed_file_path, "wb");
+    if (output_file == NULL) {
+        free(reversed_file_path);
+        fclose(input_file);
         fprintf(stderr, "Invalid file path!");
         return CANNOT_OPEN_FILE;
     }
-    free(reversedFilePath);
+    free(reversed_file_path);
 
-    backward_copying_files(inputFile, outputFile);
-    fclose(inputFile);
-    fclose(outputFile);
-
+    backward_copying_files(input_file, output_file);
+    fclose(input_file);
+    fclose(output_file);
     return SUCCESSFULLY_COPIED;
 }
 
-bool is_available_subdirectory_name(char* subdirectoryName) {
-    size_t lengthOfSubdirectoryName = strlen(subdirectoryName);
-    if (lengthOfSubdirectoryName == strlen(".") && (strstr(subdirectoryName, ".") != NULL)) {
-        return false;
-    } else if (lengthOfSubdirectoryName == strlen("..") && (strstr(subdirectoryName, "..") != NULL)) {
-        return false;
-    }
-    return true;
+bool is_available_subdir_name(char* subdir_name) {
+    size_t subdir_name_length = strlen(subdir_name);
+    return !((subdir_name_length == strlen(".") && (strstr(subdir_name, ".") != NULL)) ||
+            (subdir_name_length == strlen("..") && (strstr(subdir_name, "..") != NULL)));
 }
 
-char* prepare_subdirectory_path(char* directoryPath, char* subdirectoryName) {
-    if (!is_available_subdirectory_name(subdirectoryName)) {
+char* prepare_subdirectory_path(char* dir_path, char* subdir_name) {
+    if (!is_available_subdir_name(subdir_name)) {
         return NULL;
     }
 
-    size_t lengthOfDirectoryPath = strlen(directoryPath);
-    size_t lengthOfSubdirectoryName = strlen(subdirectoryName);
+    size_t dir_path_length = strlen(dir_path);
+    size_t subdir_name_length = strlen(subdir_name);
 
-    size_t totalLengthOfSubdirectoryPath = lengthOfDirectoryPath + lengthOfSubdirectoryName + 2;
-    char* subdirectoryPath = (char*) malloc(totalLengthOfSubdirectoryPath * sizeof(char));
-    if (subdirectoryPath == NULL) {
+    size_t merged_subdir_path_length = dir_path_length + subdir_name_length + 2;
+    char* merged_subdir_path = (char*) malloc(merged_subdir_path_length * sizeof(char));
+    if (merged_subdir_path == NULL) {
         fprintf(stderr, "Not enough of memory!");
         return NULL;
     }
-    subdirectoryPath = memset(subdirectoryPath, '\0', totalLengthOfSubdirectoryPath);
+    merged_subdir_path = memset(merged_subdir_path, '\0', merged_subdir_path_length);
 
-    char delimiterSymbol = '/';
-    subdirectoryPath = strncpy(subdirectoryPath, directoryPath, lengthOfDirectoryPath);
-    subdirectoryPath[lengthOfDirectoryPath] = delimiterSymbol;
+    char delimiter_symbol = '/';
+    merged_subdir_path = strncpy(merged_subdir_path, dir_path, dir_path_length);
+    merged_subdir_path[dir_path_length] = delimiter_symbol;
 
-    subdirectoryPath = strncat(subdirectoryPath, subdirectoryName, lengthOfSubdirectoryName);
-    return subdirectoryPath;
+    merged_subdir_path = strncat(merged_subdir_path, subdir_name, subdir_name_length);
+    return merged_subdir_path;
 }
 
-enum StatusesOfCopy create_reversed_subdirectory(char* directoryPathWithReversedName, char* subdirectoryName, char* updatedDirectoryPathWithReversedName) {
-    char* reversedSubdirectoryPath = prepare_subdirectory_path(directoryPathWithReversedName, subdirectoryName);
-    enum DirectoryErrors creationStatus = create_directory_with_reversed_name(reversedSubdirectoryPath, updatedDirectoryPathWithReversedName);
-    if (creationStatus != OK) {
+enum statuses_of_copy create_reversed_subdirectory(char* dir_path_with_reversed_name, char* subdir_name, char* subdir_path_with_reversed_name) {
+    char* subdir_path = prepare_subdirectory_path(dir_path_with_reversed_name, subdir_name);
+    enum directory_errors creation_status = create_directory_with_reversed_name(subdir_path, subdir_path_with_reversed_name);
+    if (creation_status != OK) {
         return FAILED_COPIED;
     }
     return SUCCESSFULLY_COPIED;
 }
 
-enum DirectoryErrors close_opened_directories(DIR* openedOriginDirectory, DIR* openedReversedDirectory) {
-    enum DirectoryErrors closingStatus = closedir(openedOriginDirectory);
+enum directory_errors close_opened_directories(DIR* openedOriginDirectory, DIR* openedReversedDirectory) {
+    enum directory_errors closingStatus = closedir(openedOriginDirectory);
     if (closingStatus == FAILED_DIRECTORY_CLOSING) {
         fprintf(stderr, "Cannot closing the directory!");
         return FAILED_DIRECTORY_CLOSING;
@@ -245,50 +262,50 @@ enum DirectoryErrors close_opened_directories(DIR* openedOriginDirectory, DIR* o
     return OK;
 }
 
-enum DirectoryErrors copy_all_content_of_directory(char* directoryPath, char* directoryPathWithReversedName) {
-    DIR* openedOriginDirectory = opendir(directoryPath);
-    DIR* openedReversedDirectory = opendir(directoryPathWithReversedName);
-    if (openedOriginDirectory == NULL || openedReversedDirectory == NULL) {
+enum directory_errors copy_all_content_of_directory(char* dir_path, char* dir_path_with_reversed_name) {
+    DIR* opened_origin_dir = opendir(dir_path);
+    DIR* opened_reversed_dir = opendir(dir_path_with_reversed_name);
+    if (opened_origin_dir == NULL || opened_reversed_dir == NULL) {
         fprintf(stderr, "Directory does not exist!");
         return DIRECTORY_DOESNT_EXIST;
     }
 
-    enum StatusesOfCopy copyStatus;
-    struct dirent* directoryEntry = readdir(openedOriginDirectory);
-    while (directoryEntry != NULL) {
-        if (directoryEntry->d_type == DT_REG) {
-            char* fileName = directoryEntry->d_name;
-            copyStatus = copy_file_content(directoryPath, fileName, directoryPathWithReversedName);
-            if (copyStatus != SUCCESSFULLY_COPIED) {
+    enum statuses_of_copy copy_status;
+    struct dirent* dir_entry = readdir(opened_origin_dir);
+    while (dir_entry != NULL) {
+        if (dir_entry->d_type == DT_REG) {
+            char* file_name = dir_entry->d_name;
+            copy_status = copy_file_content(dir_path, file_name, dir_path_with_reversed_name);
+            if (copy_status != SUCCESSFULLY_COPIED) {
                 break;
             }
-        } else if (directoryEntry->d_type == DT_DIR) {
-            char* subdirectoryName = directoryEntry->d_name;
-            char* subdirectoryPath = prepare_subdirectory_path(directoryPath, subdirectoryName);
-            if (subdirectoryPath != NULL) {
-                size_t updatedLengthOfDirectoryPathWithReversedName = strlen(directoryPathWithReversedName) + strlen(subdirectoryName);
-                char updatedDirectoryPathWithReversedName[updatedLengthOfDirectoryPathWithReversedName];
-                copyStatus = create_reversed_subdirectory(directoryPathWithReversedName, subdirectoryName, updatedDirectoryPathWithReversedName);
-                if (copyStatus != SUCCESSFULLY_COPIED) {
-                    free(subdirectoryPath);
+        } else if (dir_entry->d_type == DT_DIR) {
+            char* subdir_name = dir_entry->d_name;
+            char* subdir_path = prepare_subdirectory_path(dir_path, subdir_name);
+            if (subdir_path != NULL) {
+                size_t subdir_path_with_reversed_name_length = strlen(dir_path_with_reversed_name) + strlen(subdir_name);
+                char subdir_path_with_reversed_name[subdir_path_with_reversed_name_length];
+                copy_status = create_reversed_subdirectory(dir_path_with_reversed_name, subdir_name, subdir_path_with_reversed_name);
+                if (copy_status != SUCCESSFULLY_COPIED) {
+                    free(subdir_path);
                     break;
                 }
-                enum DirectoryErrors subdirectoryCopiedStatus = copy_all_content_of_directory(subdirectoryPath, updatedDirectoryPathWithReversedName);
-                if (subdirectoryCopiedStatus != SUCCESSFULLY_COPIED) {
-                    free(subdirectoryPath);
+                enum directory_errors subdir_copied_status = copy_all_content_of_directory(subdir_path, subdir_path_with_reversed_name);
+                if (subdir_copied_status != OK) {
+                    free(subdir_path);
                     return CONTENT_COPY_ERROR;
                 }
             }
-            free(subdirectoryPath);
+            free(subdir_path);
         }
-        directoryEntry = readdir(openedOriginDirectory);
+        dir_entry = readdir(opened_origin_dir);
     }
 
-    enum DirectoryErrors closingStatus = close_opened_directories(openedOriginDirectory, openedReversedDirectory);
-    if (copyStatus != SUCCESSFULLY_COPIED) {
+    enum directory_errors closing_status = close_opened_directories(opened_origin_dir, opened_reversed_dir);
+    if (copy_status != SUCCESSFULLY_COPIED) {
         return CONTENT_COPY_ERROR;
     }
-    return closingStatus;
+    return closing_status;
 }
 
 int main(int argc, char** argv) {
@@ -297,23 +314,22 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    char* directoryPath = argv[1];
-    enum DirectoryErrors existingStatus = is_this_directory_existing(directoryPath);
-    if (existingStatus != OK) {
+    char* dir_path = argv[1];
+    enum directory_errors existing_status = is_this_directory_existing(dir_path);
+    if (existing_status != OK) {
         return EXIT_FAILURE;
     }
 
-    size_t lengthOfDirectoryPath = strlen(directoryPath);
-    char directoryPathWithReversedName[lengthOfDirectoryPath];
-    enum DirectoryErrors creationStatus = create_directory_with_reversed_name(directoryPath, directoryPathWithReversedName);
-    if (creationStatus != OK) {
+    size_t dir_path_length = strlen(dir_path);
+    char dir_path_with_reversed_name[dir_path_length];
+    enum directory_errors creation_status = create_directory_with_reversed_name(dir_path, dir_path_with_reversed_name);
+    if (creation_status != OK) {
         return EXIT_FAILURE;
     }
 
-    enum DirectoryErrors copyStatus = copy_all_content_of_directory(directoryPath, directoryPathWithReversedName);
-    if (copyStatus != OK) {
+    enum directory_errors copy_status = copy_all_content_of_directory(dir_path, dir_path_with_reversed_name);
+    if (copy_status != OK) {
         return EXIT_FAILURE;
     }
-
     return EXIT_SUCCESS;
 }
