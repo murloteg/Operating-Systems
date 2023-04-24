@@ -116,6 +116,7 @@ char* prepare_file_path(char* dir_path, char* file_name) {
     size_t merged_path_length = dir_path_length + file_name_length + 2;
     char* merged_file_path = (char*) malloc(merged_path_length * sizeof(char));
     if (merged_file_path == NULL) {
+        fprintf(stderr, "Not enough of memory!\n");
         return NULL;
     }
     merged_file_path = memset(merged_file_path, '\0', merged_path_length);
@@ -131,12 +132,12 @@ char* prepare_file_path(char* dir_path, char* file_name) {
 void backward_copying_files(FILE* input_file, FILE* output_file) {
     int seeking_status = fseek(input_file, 0, SEEK_END);
     if (seeking_status == SOMETHING_WENT_WRONG) {
-        fprintf(stderr, "Failed copying!\n");
+        perror("Error during fseek!");
         return;
     }
     long file_position = ftell(input_file);
     if (file_position == SOMETHING_WENT_WRONG) {
-        fprintf(stderr, "Failed copying!\n");
+        perror("Error during ftell!");
         return;
     }
     
@@ -151,13 +152,13 @@ void backward_copying_files(FILE* input_file, FILE* output_file) {
         current_offset_from_end += count_of_reading_symbols;
         seeking_status = fseek(input_file, -current_offset_from_end, SEEK_END);
         if (seeking_status == SOMETHING_WENT_WRONG) {
-            fprintf(stderr, "Failed copying!\n");
+            perror("Error during fseek!");
             return;
         }
 
         size_t return_read_code = fread(reading_buffer, sizeof(char), count_of_reading_symbols, input_file);
-        if (return_read_code < count_of_reading_symbols) {
-            fprintf(stderr, "Incorrect reading from file!\n");
+        if (return_read_code < count_of_reading_symbols || (ferror(input_file) != OK)) {
+            fprintf(stderr, "Error during fread!\n");
             return;
         }
 
@@ -171,7 +172,6 @@ void backward_copying_files(FILE* input_file, FILE* output_file) {
 enum statuses_of_copy copy_file_content(char* dir_path, char* file_name, char* dir_path_with_reversed_name) {
     char* file_path = prepare_file_path(dir_path, file_name);
     if (file_path == NULL) {
-        fprintf(stderr, "Not enough of memory!\n");
         return MEMORY_ALLOCATION_ERROR;
     }
 
@@ -181,24 +181,23 @@ enum statuses_of_copy copy_file_content(char* dir_path, char* file_name, char* d
     char* reversed_file_path = prepare_file_path(dir_path_with_reversed_name, reversed_file_name);
     if (reversed_file_path == NULL) {
         free(file_path);
-        fprintf(stderr, "Not enough of memory!\n");
         return MEMORY_ALLOCATION_ERROR;
     }
 
     FILE* input_file = fopen(file_path, "rb");
     if (input_file == NULL) {
+        fprintf(stderr, "Invalid file path!\n");
         free(file_path);
         free(reversed_file_path);
-        fprintf(stderr, "Invalid file path!\n");
         return CANNOT_OPEN_FILE;
     }
     free(file_path);
 
     FILE* output_file = fopen(reversed_file_path, "wb");
     if (output_file == NULL) {
+        fprintf(stderr, "Invalid file path!\n");
         free(reversed_file_path);
         fclose(input_file);
-        fprintf(stderr, "Invalid file path!\n");
         return CANNOT_OPEN_FILE;
     }
     free(reversed_file_path);
