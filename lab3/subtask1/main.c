@@ -88,7 +88,7 @@ enum directory_errors create_dir_with_reversed_name(char* dir_path, char* dir_pa
     char* new_dir_path = strcat(absolute_path_without_name, reversed_dir_name);
     enum directory_errors creation_status = mkdir(new_dir_path, READ_WRITE_EXECUTE);
     if (creation_status == DIRECTORY_WAS_NOT_CREATED) {
-        fprintf(stderr, "Directory was not created!\n");
+        perror("Error during mkdir");
         return DIRECTORY_WAS_NOT_CREATED;
     }
     dir_path_with_reversed_name = strcpy(dir_path_with_reversed_name, new_dir_path);
@@ -104,7 +104,7 @@ enum directory_errors is_this_dir_existing(char* dir_path) {
 
     enum directory_errors closing_status = closedir(opened_dir);
     if (closing_status == FAILED_DIRECTORY_CLOSING) {
-        fprintf(stderr, "Cannot closing the directory!\n");
+        perror("Error during closedir");
     }
     return closing_status;
 }
@@ -116,7 +116,7 @@ char* prepare_file_path(char* dir_path, char* file_name) {
     size_t merged_path_length = dir_path_length + file_name_length + 2;
     char* merged_file_path = (char*) malloc(merged_path_length * sizeof(char));
     if (merged_file_path == NULL) {
-        fprintf(stderr, "Not enough of memory!\n");
+        perror("Error during malloc");
         return NULL;
     }
     merged_file_path = memset(merged_file_path, '\0', merged_path_length);
@@ -132,12 +132,12 @@ char* prepare_file_path(char* dir_path, char* file_name) {
 void backward_copying_files(FILE* input_file, FILE* output_file) {
     int seeking_status = fseek(input_file, 0, SEEK_END);
     if (seeking_status == SOMETHING_WENT_WRONG) {
-        perror("Error during fseek!");
+        perror("Error during fseek");
         return;
     }
     long file_position = ftell(input_file);
     if (file_position == SOMETHING_WENT_WRONG) {
-        perror("Error during ftell!");
+        perror("Error during ftell");
         return;
     }
     
@@ -152,13 +152,13 @@ void backward_copying_files(FILE* input_file, FILE* output_file) {
         current_offset_from_end += count_of_reading_symbols;
         seeking_status = fseek(input_file, -current_offset_from_end, SEEK_END);
         if (seeking_status == SOMETHING_WENT_WRONG) {
-            perror("Error during fseek!");
+            perror("Error during fseek");
             return;
         }
 
         size_t return_read_code = fread(reading_buffer, sizeof(char), count_of_reading_symbols, input_file);
         if (return_read_code < count_of_reading_symbols || (ferror(input_file) != OK)) {
-            fprintf(stderr, "Error during fread!\n");
+            fprintf(stderr, "Error during fread\n");
             return;
         }
 
@@ -186,7 +186,7 @@ enum statuses_of_copy copy_file_content(char* dir_path, char* file_name, char* d
 
     FILE* input_file = fopen(file_path, "rb");
     if (input_file == NULL) {
-        fprintf(stderr, "Invalid file path!\n");
+        perror("Error during fopen");
         free(file_path);
         free(reversed_file_path);
         return CANNOT_OPEN_FILE;
@@ -195,7 +195,7 @@ enum statuses_of_copy copy_file_content(char* dir_path, char* file_name, char* d
 
     FILE* output_file = fopen(reversed_file_path, "wb");
     if (output_file == NULL) {
-        fprintf(stderr, "Invalid file path!\n");
+        perror("Error during fopen");
         free(reversed_file_path);
         fclose(input_file);
         return CANNOT_OPEN_FILE;
@@ -225,7 +225,7 @@ char* prepare_subdir_path(char* dir_path, char* subdir_name) {
     size_t merged_subdir_path_length = dir_path_length + subdir_name_length + 2;
     char* merged_subdir_path = (char*) malloc(merged_subdir_path_length * sizeof(char));
     if (merged_subdir_path == NULL) {
-        fprintf(stderr, "Not enough of memory!\n");
+        perror("Error during malloc");
         return NULL;
     }
     merged_subdir_path = memset(merged_subdir_path, '\0', merged_subdir_path_length);
@@ -250,12 +250,12 @@ enum statuses_of_copy create_reversed_subdir(char* dir_path_with_reversed_name, 
 enum directory_errors close_opened_directories(DIR* openedOriginDirectory, DIR* openedReversedDirectory) {
     enum directory_errors closingStatus = closedir(openedOriginDirectory);
     if (closingStatus == FAILED_DIRECTORY_CLOSING) {
-        fprintf(stderr, "Cannot closing the directory!\n");
+        perror("Error during closedir");
         return FAILED_DIRECTORY_CLOSING;
     }
     closingStatus = closedir(openedReversedDirectory);
     if (closingStatus == FAILED_DIRECTORY_CLOSING) {
-        fprintf(stderr, "Cannot closing the directory!\n");
+        perror("Error during closedir");
         return FAILED_DIRECTORY_CLOSING;
     }
     return OK;
