@@ -6,16 +6,13 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-enum UtilConsts {
+enum util_consts {
     DEFAULT = 0,
     MAX_BUFFER_SIZE = 128,
+    DECIMAL_SYSTEM = 10
 };
 
-enum ServerConsts {
-    SERVER_PORT = 9999
-};
-
-typedef enum Statuses {
+typedef enum statuses {
     OK = 0,
     SOMETHING_WENT_WRONG = -1
 } status_t;
@@ -32,9 +29,17 @@ int main(int argc, char** argv) {
     memset(&server_socket_addr, 0, sizeof(server_socket_addr));
     memset(&client_socket_addr, 0, sizeof(client_socket_addr));
 
+    char* port_as_string = getenv("PORT");
+    if (port_as_string == NULL) {
+        fprintf(stderr, "Error: environment variable \"PORT\" isn't set\n");
+        close(server_socket_fd);
+        return EXIT_FAILURE;
+    }
+    short port = (short) strtol(port_as_string, NULL, DECIMAL_SYSTEM);
+
     server_socket_addr.sin_family = AF_INET;
     server_socket_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_socket_addr.sin_port = htons(SERVER_PORT);
+    server_socket_addr.sin_port = htons(port);
 
     status_t status = bind(server_socket_fd, (const struct sockaddr*) &server_socket_addr, (socklen_t) sizeof(server_socket_addr));
     if (status != OK) {
