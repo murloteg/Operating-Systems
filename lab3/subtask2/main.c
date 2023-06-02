@@ -23,11 +23,11 @@ enum options {
     UNDEFINED_OPTION = 15
 };
 
-enum statuses {
+typedef enum statuses {
     OK = 0,
     SOMETHING_WENT_WRONG = -1,
     MEMORY_ALLOCATION_ERROR = 1
-};
+} status_t;
 
 enum permission_modes {
     READ_WRITE_EXECUTE = 0777
@@ -113,19 +113,6 @@ enum options parse_option(char* file_name) {
     return UNDEFINED_OPTION;
 }
 
-// struct stat file_stat --> permissions and links.
-
-size_t calculate_total_path_length(char* curr_working_dir, char* file_name) {
-    size_t total_path_length = 0;
-    char delimiter_symbol = '_';
-    char* last_position = strrchr(file_name, delimiter_symbol);
-    if (last_position == NULL) {
-        return total_path_length;
-    }
-    total_path_length = strlen(curr_working_dir) + strlen(last_position) - 1;
-    return total_path_length;
-}
-
 char* prepare_full_file_path(char* curr_working_dir, char* file_name) {
     size_t cwd_length = strlen(curr_working_dir);
     size_t file_name_length = strlen(file_name);
@@ -143,26 +130,15 @@ char* prepare_full_file_path(char* curr_working_dir, char* file_name) {
     return merged_file_path;
 }
 
-char* get_file_name_from_input(char* option) {
-    char delimiter_symbol = '_';
-    char* last_position = strrchr(option, delimiter_symbol);
-    if (last_position == NULL) {
-        fprintf(stderr, "Incorrect argument!\n");
-        return NULL;
-    }
-    return last_position + 1;
-}
-
-enum statuses create_dir(char* full_file_path) {
+status_t create_dir(char* full_file_path) {
     int creation_status = mkdir(full_file_path, READ_WRITE_EXECUTE);
-    if (creation_status == SOMETHING_WENT_WRONG) {
+    if (creation_status != OK) {
         perror("Error during mkdir");
-        return SOMETHING_WENT_WRONG;
     }
-    return OK;
+    return creation_status;
 }
 
-enum statuses print_dir_content(char* full_file_path) {
+status_t print_dir_content(char* full_file_path) {
     DIR* opened_dir = opendir(full_file_path);
     if (opened_dir == NULL) {
         fprintf(stderr, "Cannot open the directory!\n");
@@ -176,14 +152,13 @@ enum statuses print_dir_content(char* full_file_path) {
     }
 
     int closing_status = closedir(opened_dir);
-    if (closing_status == SOMETHING_WENT_WRONG) {
+    if (closing_status != OK) {
         perror("Error during closedir");
-        return SOMETHING_WENT_WRONG;
     }
-    return OK;
+    return closing_status;
 }
 
-enum statuses create_file(char* full_file_path) {
+status_t create_file(char* full_file_path) {
     FILE* created_file = fopen(full_file_path, "w");
     if (created_file == NULL) {
         perror("Error during fopen");
@@ -192,22 +167,20 @@ enum statuses create_file(char* full_file_path) {
     int closing_status = fclose(created_file);
     if (closing_status != OK) {
         perror("Error during fclose");
-        return SOMETHING_WENT_WRONG;
     }
-    return OK;
+    return closing_status;
 }
 
 /* for files, directories and symbolic links */
-enum statuses remove_file(char* full_file_path) {
+status_t remove_file(char* full_file_path) {
     int removing_status = remove(full_file_path);
-    if (removing_status == SOMETHING_WENT_WRONG) {
+    if (removing_status != OK) {
         perror("Error during remove");
-        return SOMETHING_WENT_WRONG;
     }
-    return OK;
+    return removing_status;
 }
 
-enum statuses read_content_from_file(FILE* opened_file) {
+status_t read_content_from_file(FILE* opened_file) {
     int seeking_status = fseek(opened_file, 0, SEEK_END);
     if (seeking_status == SOMETHING_WENT_WRONG) {
         perror("Error during fseek");
@@ -234,13 +207,13 @@ enum statuses read_content_from_file(FILE* opened_file) {
         }
         size_t reading_status = fread(buffer, sizeof(char), curr_reading_count, opened_file);
         if (reading_status < curr_reading_count || (ferror(opened_file) != OK)) {
-            fprintf(stderr, "Error during fread!\n");
+            fprintf(stderr, "Error during fread\n");
             return SOMETHING_WENT_WRONG;
         }
 
         size_t writing_status = fwrite(buffer, sizeof(char), curr_reading_count, stdout);
         if (writing_status < curr_reading_count) {
-            fprintf(stderr, "Error during fwrite!\n");
+            fprintf(stderr, "Error during fwrite\n");
             return SOMETHING_WENT_WRONG;
         }
         reading_count -= BUFFER_LENGTH;
@@ -248,33 +221,32 @@ enum statuses read_content_from_file(FILE* opened_file) {
     return OK;
 }
 
-enum statuses print_file_content(char* full_file_path) {
+status_t print_file_content(char* full_file_path) {
     FILE* opened_file = fopen(full_file_path, "rb");
     if (opened_file == NULL) {
         perror("Error during fopen");
         return SOMETHING_WENT_WRONG;
     }
 
-    enum statuses reading_status = read_content_from_file(opened_file);
+    status_t reading_status = read_content_from_file(opened_file);
     int closing_status = fclose(opened_file);
     if (closing_status != OK) {
         perror("Error during fclose");
-        return SOMETHING_WENT_WRONG;
     }
     return reading_status;
 }
 
-enum statuses create_sym_link(char* full_file_path) {
-    int linking_status = symlink(full_file_path, "symlink");
-    if (linking_status == SOMETHING_WENT_WRONG) {
+status_t create_sym_link(char* full_file_path) {
+    int linking_status = symlink(full_file_path, "sym_link");
+    if (linking_status != OK) {
         perror("Error during symlink");
-        return SOMETHING_WENT_WRONG;
     }
-    return OK;
+    return linking_status;
 }
 
-enum statuses print_sym_link_content(char* full_file_path) {
+status_t print_sym_link_content(char* full_file_path) {
     char buffer[MAX_CWD_LENGTH];
+    memset(buffer, '\0', MAX_CWD_LENGTH);
     ssize_t reading_status = readlink(full_file_path, buffer, MAX_CWD_LENGTH);
     if (reading_status == SOMETHING_WENT_WRONG) {
         perror("Error during readlink");
@@ -284,14 +256,15 @@ enum statuses print_sym_link_content(char* full_file_path) {
     size_t content_size = strlen(buffer);
     size_t writing_status = fwrite(buffer, sizeof(char), content_size, stdout);
     if (writing_status < content_size) {
-        fprintf(stderr, "Error during fwrite!\n");
+        fprintf(stderr, "Error during fwrite\n");
         return SOMETHING_WENT_WRONG;
     }
     return OK;
 }
 
-enum statuses print_file_content_by_sym_link(char* full_file_path) {
+status_t print_file_content_by_sym_link(char* full_file_path) {
     char buffer[MAX_CWD_LENGTH];
+    memset(buffer, '\0', MAX_CWD_LENGTH);
     ssize_t reading_status = readlink(full_file_path, buffer, MAX_CWD_LENGTH);
     if (reading_status == SOMETHING_WENT_WRONG) {
         perror("Error during readlink");
@@ -308,9 +281,53 @@ enum statuses print_file_content_by_sym_link(char* full_file_path) {
     int closing_status = fclose(opened_file);
     if (closing_status != OK) {
         perror("Error during fclose");
-        return SOMETHING_WENT_WRONG;
     }
     return reading_status;
+}
+
+status_t create_hard_link(char* full_file_path) {
+    int linking_status = link(full_file_path, "hard_link");
+    if (linking_status != OK) {
+        perror("Error during link");
+    }
+    return linking_status;
+}
+
+status_t print_file_permissions(char* full_file_path) {
+    struct stat file_stat;
+    int status = stat(full_file_path, &file_stat);
+    if (status != OK) {
+        perror("Error during stat");
+        return SOMETHING_WENT_WRONG;
+    }
+
+    fprintf(stdout, "permissions: ");
+    if (S_ISREG(file_stat.st_mode)) {
+        fprintf(stdout, "-");
+    } else if (S_ISDIR(file_stat.st_mode)) {
+        fprintf(stdout, "d");
+    } else {
+        fprintf(stdout, "?");
+    }
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IRUSR) ? "r" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IWUSR) ? "w" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IXUSR) ? "x" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IRGRP) ? "r" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IWGRP) ? "w" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IXGRP) ? "x" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IROTH) ? "r" : "-");
+    fprintf(stdout, "%s", (file_stat.st_mode & S_IWOTH) ? "w" : "-");
+    fprintf(stdout, "%s\n", (file_stat.st_mode & S_IXOTH) ? "x" : "-");
+    fprintf(stdout, "number of hard links: %d\n", file_stat.st_nlink);
+    return OK;
+}
+
+status_t change_file_permissions(char* full_file_path) {
+    int changing_status = chmod(full_file_path, READ_WRITE_EXECUTE);
+    if (changing_status != OK) {
+        perror("Error during chmod");
+    }
+    return changing_status;
 }
 
 void clean_up(char* curr_working_dir, char* full_file_path) {
@@ -318,7 +335,7 @@ void clean_up(char* curr_working_dir, char* full_file_path) {
     free(full_file_path);
 }
 
-enum statuses execute_option(enum options option_type, char* option) {
+status_t execute_option(enum options option_type, char* file_name) {
     char* curr_working_dir = (char*) calloc(MAX_CWD_LENGTH, sizeof(char));
     if (curr_working_dir == NULL) {
         perror("Error during calloc");
@@ -331,16 +348,13 @@ enum statuses execute_option(enum options option_type, char* option) {
         return SOMETHING_WENT_WRONG;
     }
 
-    char* full_file_path = get_file_name_from_input(option);
-    if (full_file_path == NULL) {
-        return SOMETHING_WENT_WRONG;
-    }
+    char* full_file_path = file_name;
     full_file_path = prepare_full_file_path(curr_working_dir, full_file_path);
     if (full_file_path == NULL) {
         return SOMETHING_WENT_WRONG;
     }
 
-    enum statuses execution_status = OK;
+    status_t execution_status = OK;
     switch (option_type) {
         case CREATE_DIR: {
             execution_status = create_dir(full_file_path);
@@ -383,19 +397,19 @@ enum statuses execute_option(enum options option_type, char* option) {
             break;
         }
         case CREATE_HARD_LINK: {
-            //
+            execution_status = create_hard_link(full_file_path);
             break;
         }
         case REMOVE_HARD_LINK: {
-            //
+            execution_status = remove_file(full_file_path);
             break;
         }
         case PRINT_FILE_PERMISSIONS: {
-            //
+            execution_status = print_file_permissions(full_file_path);
             break;
         }
         case CHANGE_FILE_PERMISSIONS: {
-            //
+            execution_status = change_file_permissions(full_file_path);
             break;
         }
         default: {
@@ -409,21 +423,21 @@ enum statuses execute_option(enum options option_type, char* option) {
 
 int main(int argc, char** argv) {
     if (argc != REQUIRED_ARGUMENTS_NUMBER) {
-        fprintf(stderr, "Incorrect number of arguments!\n");
+        fprintf(stderr, "Usage: ./required_option <file_name>\n");
         return EXIT_FAILURE;
     }
 
-    char* option = argv[1];
+    char* option = argv[0];
     enum options option_type = parse_option(option);
     if (option_type == UNDEFINED_OPTION) {
         fprintf(stderr, "Unexpected option!\n");
         return EXIT_FAILURE;
     }
 
-    enum statuses execution_status = execute_option(option_type, option);
+    char* file_name = argv[1];
+    status_t execution_status = execute_option(option_type, file_name);
     if (execution_status != OK) {
         return EXIT_FAILURE;
     }
-
     return EXIT_SUCCESS;
 }
