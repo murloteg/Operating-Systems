@@ -171,7 +171,7 @@ status_t create_file(char* full_file_path) {
     return closing_status;
 }
 
-/* for files, directories and symbolic links */
+/* for all types of files */
 status_t remove_file(char* full_file_path) {
     int removing_status = remove(full_file_path);
     if (removing_status != OK) {
@@ -345,12 +345,14 @@ status_t execute_option(enum options option_type, char* file_name) {
     curr_working_dir = getcwd(curr_working_dir, MAX_CWD_LENGTH);
     if (curr_working_dir == NULL) {
         perror("Error during getcwd");
+        free(curr_working_dir);
         return SOMETHING_WENT_WRONG;
     }
 
     char* full_file_path = file_name;
     full_file_path = prepare_full_file_path(curr_working_dir, full_file_path);
     if (full_file_path == NULL) {
+        free(curr_working_dir);
         return SOMETHING_WENT_WRONG;
     }
 
@@ -423,7 +425,7 @@ status_t execute_option(enum options option_type, char* file_name) {
 
 int main(int argc, char** argv) {
     if (argc != REQUIRED_ARGUMENTS_NUMBER) {
-        fprintf(stderr, "Usage: ./required_option <file_name>\n");
+        fprintf(stderr, "Usage: ./options/required_option <file_name>\n");
         return EXIT_FAILURE;
     }
 

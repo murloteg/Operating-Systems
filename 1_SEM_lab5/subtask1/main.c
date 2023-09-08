@@ -16,7 +16,7 @@ enum consts {
 enum utils {
     CHILD_PID_AFTER_FORK = 0,
     PARENT_DELAY_TIME_IN_SEC = 30,
-    CHILD_DELAY_TIME_IN_SEC = 15,
+    CHILD_DELAY_TIME_IN_SEC = 10,
     CHILD_EXIT_CODE = 5,
     BLOCKING_WAIT = 0
 };
@@ -40,11 +40,19 @@ enum statuses execute_program() {
 
         fprintf(stdout, "[CHILD] global var: address %p ; old value %d\n", &global_int_var, global_int_var);
         fprintf(stdout, "[CHILD] local var: address %p ; old value %d\n", &local_int_var, local_int_var);
+
+        unsigned int status = sleep(CHILD_DELAY_TIME_IN_SEC);
+        if (status != OK) {
+            fprintf(stderr, "Woke up earlier!\n");
+            return SOMETHING_WENT_WRONG;
+        }
+
         local_int_var = NEW_VALUE;
         global_int_var = NEW_VALUE;
         fprintf(stdout, "[CHILD] global var: address %p ; new value %d\n", &global_int_var, global_int_var);
         fprintf(stdout, "[CHILD] local var: address %p ; new value %d\n", &local_int_var, local_int_var);
-        unsigned int status = sleep(CHILD_DELAY_TIME_IN_SEC);
+
+        status = sleep(CHILD_DELAY_TIME_IN_SEC);
         if (status != OK) {
             fprintf(stderr, "Woke up earlier!\n");
             return SOMETHING_WENT_WRONG;

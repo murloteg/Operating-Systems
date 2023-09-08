@@ -197,14 +197,26 @@ enum statuses_of_copy copy_file_content(char* dir_path, char* file_name, char* d
     if (output_file == NULL) {
         perror("Error during fopen");
         free(reversed_file_path);
-        fclose(input_file);
+        int closing_status = fclose(input_file);
+        if (closing_status != OK) {
+            perror("Error during fclose");
+            return FAILED_COPIED;
+        }
         return CANNOT_OPEN_FILE;
     }
     free(reversed_file_path);
 
     backward_copying_files(input_file, output_file);
-    fclose(input_file);
-    fclose(output_file);
+    int closing_status = fclose(input_file);
+    if (closing_status != OK) {
+        perror("Error during fclose");
+        return FAILED_COPIED;
+    }
+    closing_status = fclose(output_file);
+    if (closing_status != OK) {
+        perror("Error during fclose");
+        return FAILED_COPIED;
+    }
     return SUCCESSFULLY_COPIED;
 }
 
