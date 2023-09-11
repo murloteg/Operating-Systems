@@ -7,7 +7,8 @@ enum util_consts {
     NUMBER_OF_THREADS = 5,
     GLOBAL_VARIABLE_VALUE = 1500,
     LOCAL_VARIABLE_VALUE = 700,
-    NEW_VALUE_OF_VARIABLE = 4000
+    NEW_VALUE_OF_VARIABLE = 4000,
+    TIME_TO_SLEEP_SEC = 15
 };
 
 typedef enum statuses {
@@ -17,24 +18,19 @@ typedef enum statuses {
 
 long global_var = GLOBAL_VARIABLE_VALUE;
 
-void print_separator() {
-    fprintf(stdout, "============\n\n");
-}
-
 void* thread_routine(void* arg) {
     short local_var = LOCAL_VARIABLE_VALUE;
     const short const_local_var = LOCAL_VARIABLE_VALUE;
     static short static_local_var = LOCAL_VARIABLE_VALUE;
 
-    fprintf(stdout, "Thread routine result -> [PID: %d], [PPID: %d], [TID: %d]\n", getpid(), getppid(), pthread_self());
+    fprintf(stdout, "Thread routine result -> [PID: %d], [PPID: %d], [TID: %ld]\n", getpid(), getppid(), pthread_self());
     fprintf(stdout, "Addresses of variables -> [GV: %p], [LV: %p], [CLV: %p], [SLV: %p]\n", &global_var,
             &local_var, &const_local_var, &static_local_var);
 
     fprintf(stdout, "Values BEFORE changes -> [GV: %ld], [LV: %d]\n", global_var, local_var);
     local_var = NEW_VALUE_OF_VARIABLE;
     global_var = NEW_VALUE_OF_VARIABLE;
-    fprintf(stdout, "Values AFTER changes -> [GV: %ld], [LV: %d]\n", global_var, local_var);
-    print_separator();
+    fprintf(stdout, "Values AFTER changes -> [GV: %ld], [LV: %d]\n\n\n", global_var, local_var);
     return NULL;
 }
 
@@ -45,12 +41,18 @@ status_t initialize_threads(pthread_t* threads) {
             fprintf(stderr, "Error during pthread_create(); error code: %d\n", creation_status);
             return SOMETHING_WENT_WRONG;
         }
-        fprintf(stdout, "Iteration: %d, [TID: %d]\n", i, threads[i]);
+        fprintf(stdout, "Iteration: %d, [TID: %ld]\n", i, threads[i]);
     }
     return OK;
 }
 
 status_t execute_program() {
+    fprintf(stdout, ">>> Main Thread PID: %d <<<\n", getpid());
+    unsigned int sleeping_status = sleep(TIME_TO_SLEEP_SEC);
+    if (sleeping_status != OK) {
+        fprintf(stderr, "Error during sleep()");
+    }
+
     pthread_t* threads = malloc(sizeof(pthread_t) * NUMBER_OF_THREADS);
     if (threads == NULL) {
         perror("Error during malloc()");
@@ -63,7 +65,7 @@ status_t execute_program() {
         return SOMETHING_WENT_WRONG;
     }
 
-    unsigned int sleeping_status = sleep(NUMBER_OF_THREADS);
+    sleeping_status = sleep(TIME_TO_SLEEP_SEC);
     if (sleeping_status != OK) {
         fprintf(stderr, "Error during sleep()");
     }

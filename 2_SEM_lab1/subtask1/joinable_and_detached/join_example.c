@@ -15,6 +15,7 @@ void* thread_routine(void* arg) {
     fprintf(stdout, "Hello from thread routine!\n");
     /* This section for 1.2.b */
 //    return (void*) RETURN_CODE;
+    /* This section for 1.2.c */
     char* return_string = "hello world";
     return (void*) return_string;
 }
@@ -55,6 +56,7 @@ status_t execute_program() {
     }
     /* This section for 1.2.b */
 //    fprintf(stdout, "Thread joined with exit code: %ld\n", (long) thread_exit_code);
+    /* This section for 1.2.c */
     fprintf(stdout, "Thread joined with exit code: %s\n", (char*) thread_exit_code);
     return OK;
 }
