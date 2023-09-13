@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 enum util_consts {
     INTEGER_VALUE = 100
@@ -16,7 +17,8 @@ typedef struct sample {
 } sample;
 
 void* thread_routine(void* arg) {
-    // TODO
+    sample* instance = (sample*) arg;
+    fprintf(stdout, "[instance->integer_value: \"%d\", instance->string: \"%s\"]\n", instance->integer_value, instance->string);
     return NULL;
 }
 
@@ -40,7 +42,20 @@ status_t execute_program() {
     if (instance == NULL) {
         return SOMETHING_WENT_WRONG;
     }
-    // TODO
+    pthread_t thread;
+    int creation_status = pthread_create(&thread, NULL, thread_routine, (void*) instance);
+    if (creation_status != OK) {
+        fprintf(stderr, "Error during pthread_create(); error code: %d\n", creation_status);
+        clean_up(instance);
+        return SOMETHING_WENT_WRONG;
+    }
+    void* returned_value;
+    int join_status = pthread_join(thread, &returned_value);
+    if (join_status != OK) {
+        fprintf(stderr, "Error during pthread_join(); error code: %d\n", join_status);
+        clean_up(instance);
+        return SOMETHING_WENT_WRONG;
+    }
     clean_up(instance);
     return OK;
 }
