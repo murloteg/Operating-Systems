@@ -3,4 +3,4 @@ project(2_SEM_lab1-subtask2 C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(2_SEM_lab1-subtask2 custom_threads/custom_threads.c)
+add_executable(2_SEM_lab1-subtask2 kernel_threads/kernel_threads.c)
