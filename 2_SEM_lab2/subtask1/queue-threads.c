@@ -93,7 +93,7 @@ status_t execute_program() {
 
     // TODO: join threads
 
-    queue_destroy(queue);
+    // queue_destroy(queue);
     pthread_exit(NULL);
     return OK;
 }

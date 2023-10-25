@@ -12,12 +12,12 @@
 
 #include "utils.h"
 
-typedef struct _QueueNode {
+typedef struct queue_node {
 	int value;
-	struct _QueueNode* next;
+	struct queue_node* next;
 } qnode_t;
 
-typedef struct _Queue {
+typedef struct queue {
 	qnode_t* first;
 	qnode_t* last;
 
