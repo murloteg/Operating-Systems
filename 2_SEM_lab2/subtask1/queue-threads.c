@@ -15,89 +15,93 @@
 #define RED "\033[41m"
 #define NOCOLOR "\033[0m"
 
-// TODO: do refactoring
 void set_cpu(int n) {
-	int err;
-	cpu_set_t cpuset;
-	pthread_t tid = pthread_self();
-
+    cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(n, &cpuset);
 
-	err = pthread_setaffinity_np(tid, sizeof(cpu_set_t), &cpuset);
-	if (err) {
-		printf("set_cpu: pthread_setaffinity failed for cpu %d\n", n);
+    pthread_t tid = pthread_self();
+	int setting_status = pthread_setaffinity_np(tid, sizeof(cpu_set_t), &cpuset);
+	if (setting_status != OK) {
+		fprintf(stderr, "set_cpu: pthread_setaffinity failed for cpu %d\n", n);
 		return;
 	}
-
-	printf("set_cpu: set cpu %d\n", n);
+	fprintf(stdout, "set_cpu: set cpu %d\n", n);
 }
 
-void *reader(void *arg) {
+void* reader(void* arg) {
+    printf("READER-THREAD [%d %d %d]\n", getpid(), getppid(), gettid());
+
 	int expected = 0;
-	queue_t *q = (queue_t *)arg;
-	printf("reader [%d %d %d]\n", getpid(), getppid(), gettid());
-
+	queue_t* queue = (queue_t*) arg;
 	set_cpu(1);
 
-	while (1) {
-		int val = -1;
-		int ok = queue_get(q, &val);
-		if (!ok)
-			continue;
+	while (true) {
+		int value = -1;
+		status_t getting_status = queue_get(queue, &value);
+		if (getting_status != OK) {
+            continue;
+        }
 
-		if (expected != val)
-			printf(RED"ERROR: get value is %d but expected - %d" NOCOLOR "\n", val, expected);
-
-		expected = val + 1;
+		if (expected != value) {
+            fprintf(stdout, RED"ERROR: get value is %d but expected - %d" NOCOLOR "\n", value, expected);
+        }
+		expected = value + 1;
 	}
-
 	return NULL;
 }
 
-void *writer(void *arg) {
-	int i = 0;
-	queue_t *q = (queue_t *)arg;
-	printf("writer [%d %d %d]\n", getpid(), getppid(), gettid());
+void* writer(void* arg) {
+    printf("WRITER-THREAD [%d %d %d]\n", getpid(), getppid(), gettid());
 
+	queue_t* queue = (queue_t*) arg;
 	set_cpu(1);
 
-	while (1) {
-		int ok = queue_add(q, i);
-		if (!ok)
-			continue;
-		i++;
+    int value = 0;
+	while (true) {
+		status_t adding_status = queue_add(queue, value);
+		if (adding_status != OK) {
+            continue;
+        }
+        ++value;
 	}
-
 	return NULL;
+}
+
+status_t execute_program() {
+    printf("MAIN-THREAD [%d %d %d]\n\n", getpid(), getppid(), gettid());
+
+    queue_t* queue = queue_init(QUEUE_SIZE);
+    pthread_t tid;
+    status_t creation_status = pthread_create(&tid, NULL, reader, queue);
+    if (creation_status != OK) {
+        fprintf(stderr, "main: pthread_create() for reader failed with code: %d\n", creation_status);
+        return SOMETHING_WENT_WRONG;
+    }
+
+    int scheduling_status = sched_yield();
+    if (scheduling_status != OK) {
+        perror("Error during sched_yield()");
+        return SOMETHING_WENT_WRONG;
+    }
+
+    creation_status = pthread_create(&tid, NULL, writer, queue);
+    if (creation_status != OK) {
+        fprintf(stderr, "main: pthread_create() for writer failed with code: %d\n", creation_status);
+        return SOMETHING_WENT_WRONG;
+    }
+
+    // TODO: join threads
+
+    queue_destroy(queue);
+    pthread_exit(NULL);
+    return OK;
 }
 
 int main() {
-	pthread_t tid;
-	queue_t *q;
-	int err;
-
-	printf("main [%d %d %d]\n", getpid(), getppid(), gettid());
-
-	q = queue_init(1000000);
-
-	err = pthread_create(&tid, NULL, reader, q);
-	if (err) {
-		printf("main: pthread_create() failed: %s\n", strerror(err));
-		return -1;
-	}
-
-	sched_yield();
-
-	err = pthread_create(&tid, NULL, writer, q);
-	if (err) {
-		printf("main: pthread_create() failed: %s\n", strerror(err));
-		return -1;
-	}
-
-	// TODO: join threads
-
-	pthread_exit(NULL);
-
-	return EXIT_SUCCESS;
+    status_t executing_status = execute_program();
+    if (executing_status != OK) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

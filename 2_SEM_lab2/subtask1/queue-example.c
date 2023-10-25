@@ -11,7 +11,7 @@
 #include "queue.h"
 
 status_t execute_program() {
-    fprintf(stdout, "MAIN: [%d %d %d]\n", getpid(), getppid(), gettid());
+    fprintf(stdout, "MAIN-THREAD: [%d %d %d]\n\n", getpid(), getppid(), gettid());
     queue_t *queue = queue_init(QUEUE_SIZE);
 
     for (int i = 0; i < 10; ++i) {
@@ -27,7 +27,6 @@ status_t execute_program() {
     for (int i = 0; i < 12; ++i) {
         int value = -1;
         status_t getting_status = queue_get(queue, &value);
-
         if (getting_status == OK) {
             fprintf(stdout, "Value was got successfully! Value: %d\n", value);
         } else {
@@ -35,7 +34,6 @@ status_t execute_program() {
         }
         queue_print_stats(queue);
     }
-
     queue_destroy(queue);
     return OK;
 }
