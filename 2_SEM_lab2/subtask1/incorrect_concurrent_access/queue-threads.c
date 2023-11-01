@@ -72,8 +72,8 @@ status_t execute_program() {
     printf("MAIN-THREAD [%d %d %d]\n\n", getpid(), getppid(), gettid());
 
     queue_t* queue = queue_init(QUEUE_SIZE);
-    pthread_t tid;
-    status_t creation_status = pthread_create(&tid, NULL, reader, queue);
+    pthread_t reader_tid;
+    status_t creation_status = pthread_create(&reader_tid, NULL, reader, queue);
     if (creation_status != OK) {
         fprintf(stderr, "main: pthread_create() for reader failed with code: %d\n", creation_status);
         return SOMETHING_WENT_WRONG;
@@ -85,16 +85,27 @@ status_t execute_program() {
         return SOMETHING_WENT_WRONG;
     }
 
-    creation_status = pthread_create(&tid, NULL, writer, queue);
+    pthread_t writer_tid;
+    creation_status = pthread_create(&writer_tid, NULL, writer, queue);
     if (creation_status != OK) {
         fprintf(stderr, "main: pthread_create() for writer failed with code: %d\n", creation_status);
         return SOMETHING_WENT_WRONG;
     }
 
-    // TODO: join threads
+    void* reader_return_value = NULL;
+    int reader_join_status = pthread_join(reader_tid, &reader_return_value);
+    if (reader_join_status != OK) {
+        fprintf(stderr, "Error during pthread_join() for reader thread. Error code: %d\n", reader_join_status);
+        return SOMETHING_WENT_WRONG;
+    }
 
-    // queue_destroy(queue);
-    pthread_exit(NULL);
+    void* writer_return_value = NULL;
+    int writer_join_status = pthread_join(writer_tid, &writer_return_value);
+    if (writer_join_status != OK) {
+        fprintf(stderr, "Error during pthread_join() for writer thread. Error code: %d\n", writer_join_status);
+        return SOMETHING_WENT_WRONG;
+    }
+    queue_destroy(queue);
     return OK;
 }
 
@@ -105,3 +116,9 @@ int main() {
     }
     return EXIT_SUCCESS;
 }
+
+/*
+ * <= 200_000 - qmonitor выводит информацию чаще (до seg_fault)
+ * 1_000_000 - программа быстро падает
+ * Когда треды на разных cpu, то почти моментальный segfault.
+ */
