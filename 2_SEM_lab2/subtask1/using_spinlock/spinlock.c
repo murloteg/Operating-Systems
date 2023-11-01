@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#include <stdatomic.h>
+
 #include "spinlock.h"
 
 void spinlock_init(spinlock_t* spinlock) {
@@ -7,7 +10,7 @@ void spinlock_init(spinlock_t* spinlock) {
 void spinlock_lock(spinlock_t* spinlock) {
     while (true) {
         bool expected = true;
-        if (atomic_compare_exchange_strong(&spinlock, &expected, false)) {
+        if (atomic_compare_exchange_strong(&spinlock->is_unlocked, &expected, false)) {
             break;
         }
     }
@@ -15,5 +18,5 @@ void spinlock_lock(spinlock_t* spinlock) {
 
 void spinlock_unlock(spinlock_t* spinlock) {
     bool expected = false;
-    atomic_compare_exchange_strong(&spinlock, &expected, true);
+    atomic_compare_exchange_strong(&spinlock->is_unlocked, &expected, true);
 }

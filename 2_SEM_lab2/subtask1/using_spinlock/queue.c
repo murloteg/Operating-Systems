@@ -41,9 +41,10 @@ queue_t* queue_init(int max_count) {
 }
 
 int queue_add(queue_t* queue, int value) {
-    spinlock_lock(&spinlock);
     ++queue->add_attempts;
     assert(queue->count <= queue->max_count);
+
+    spinlock_lock(&spinlock);
     if (queue->count == queue->max_count) {
         return SOMETHING_WENT_WRONG;
     }
@@ -70,9 +71,10 @@ int queue_add(queue_t* queue, int value) {
 }
 
 int queue_get(queue_t* queue, int* value) {
-    spinlock_lock(&spinlock);
     queue->get_attempts++;
     assert(queue->count >= 0);
+
+    spinlock_lock(&spinlock);
     if (queue->count == 0) {
         return SOMETHING_WENT_WRONG;
     }

@@ -1,5 +1,5 @@
 TARGET_1 = queue-example
-SRCS_1 = queue.c queue-example.c
+SRCS_1 = spinlock.c queue.c queue-example.c
 
 TARGET_2 = queue-threads
 SRCS_2 = spinlock.c queue.c queue-threads.c
