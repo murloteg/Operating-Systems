@@ -90,6 +90,7 @@ void queue_destroy(queue_t* queue) {
             queue->first = next;
         }
     }
+    // TODO
     free(queue);
 }
 
