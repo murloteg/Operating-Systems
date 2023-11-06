@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "spinlock.h"
 #include "utils.h"
 
 typedef struct queue_node {

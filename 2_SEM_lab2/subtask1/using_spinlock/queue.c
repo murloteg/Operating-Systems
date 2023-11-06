@@ -125,8 +125,17 @@ void queue_destroy(queue_t* queue) {
 }
 
 void queue_print_stats(queue_t* queue) {
+    int lock_status = pthread_spin_lock(&spinlock);
+    if (lock_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_lock(); error code: %d\n", lock_status);
+        return SOMETHING_WENT_WRONG;
+    }
     printf("[QUEUE STATS]: [CURR SIZE: %d]; [ATTEMPTS: (%ld %ld %ld)]; [COUNTS: (%ld %ld %ld)]\n",
         queue->count,
         queue->add_attempts, queue->get_attempts, queue->add_attempts - queue->get_attempts,
         queue->add_count, queue->get_count, queue->add_count - queue->get_count);
+    if (unlock_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
+        return SOMETHING_WENT_WRONG;
+    }
 }

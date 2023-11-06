@@ -6,7 +6,7 @@ SRCS_2 = queue.c queue-threads.c
 
 CC=gcc
 RM=rm
-CFLAGS= -g -Wall
+CFLAGS= -g -Wall -fsanitize=address
 LIBS=-lpthread
 INCLUDE_DIR="."
 
