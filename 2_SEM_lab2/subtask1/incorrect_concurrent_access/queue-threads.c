@@ -106,6 +106,7 @@ status_t execute_program() {
         return SOMETHING_WENT_WRONG;
     }
     queue_destroy(queue);
+    // TODO: почему при больших размерах быстро падает очередь?
     return OK;
 }
 
@@ -116,9 +117,3 @@ int main() {
     }
     return EXIT_SUCCESS;
 }
-
-/*
- * <= 200_000 - qmonitor выводит информацию чаще (до seg_fault)
- * 1_000_000 - программа быстро падает
- * Когда треды на разных cpu, то почти моментальный segfault.
- */

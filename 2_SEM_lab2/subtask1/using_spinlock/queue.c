@@ -4,7 +4,7 @@
 
 #include "queue.h"
 
-spinlock_t spinlock;
+pthread_spinlock_t spinlock;
 
 void* qmonitor(void *arg) {
     queue_t *queue = (queue_t*) arg;
@@ -18,6 +18,11 @@ void* qmonitor(void *arg) {
 }
 
 queue_t* queue_init(int max_count) {
+    int spinlock_initialization_status = pthread_spin_init(&spinlock, PTHREAD_PROCESS_SHARED);
+    if (spinlock_initialization_status != OK) {
+        fprintf(stderr, "Error during initializing of spinlock\n");
+        abort();
+    }
     queue_t* queue = (queue_t*) malloc(sizeof(queue_t));
     if (queue == NULL) {
         perror("Error during malloc()");
@@ -41,7 +46,11 @@ queue_t* queue_init(int max_count) {
 }
 
 int queue_add(queue_t* queue, int value) {
-    spinlock_lock(&spinlock);
+    int lock_status = pthread_spin_lock(&spinlock);
+    if (lock_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_lock(); error code: %d\n", lock_status);
+        return SOMETHING_WENT_WRONG;
+    }
     ++queue->add_attempts;
     assert(queue->count <= queue->max_count);
     if (queue->count == queue->max_count) {
@@ -65,12 +74,20 @@ int queue_add(queue_t* queue, int value) {
     }
     ++queue->count;
     ++queue->add_count;
-    spinlock_unlock(&spinlock);
+    int unlock_status = pthread_spin_unlock(&spinlock);
+    if (unlock_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
+        return SOMETHING_WENT_WRONG;
+    }
     return OK;
 }
 
 int queue_get(queue_t* queue, int* value) {
-    spinlock_lock(&spinlock);
+    int lock_status = pthread_spin_lock(&spinlock);
+    if (lock_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_lock(); error code: %d\n", lock_status);
+        return SOMETHING_WENT_WRONG;
+    }
     queue->get_attempts++;
     assert(queue->count >= 0);
     if (queue->count == 0) {
@@ -84,7 +101,11 @@ int queue_get(queue_t* queue, int* value) {
 
     --queue->count;
     ++queue->get_count;
-    spinlock_unlock(&spinlock);
+    int unlock_status = pthread_spin_unlock(&spinlock);
+    if (unlock_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
+        return SOMETHING_WENT_WRONG;
+    }
     return OK;
 }
 
@@ -97,6 +118,10 @@ void queue_destroy(queue_t* queue) {
         }
     }
     free(queue);
+    int destroy_status = pthread_spin_destroy(&spinlock);
+    if (destroy_status != OK) {
+        fprintf(stderr, "Error during pthread_spin_destroy(); error code: %d\n", destroy_status);
+    }
 }
 
 void queue_print_stats(queue_t* queue) {
