@@ -53,7 +53,12 @@ int queue_add(queue_t* queue, int value) {
     }
     ++queue->add_attempts;
     assert(queue->count <= queue->max_count);
+    int unlock_status;
     if (queue->count == queue->max_count) {
+        unlock_status = pthread_spin_unlock(&spinlock);
+        if (unlock_status != OK) {
+            fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
+        }
         return SOMETHING_WENT_WRONG;
     }
 
@@ -74,7 +79,7 @@ int queue_add(queue_t* queue, int value) {
     }
     ++queue->count;
     ++queue->add_count;
-    int unlock_status = pthread_spin_unlock(&spinlock);
+    unlock_status = pthread_spin_unlock(&spinlock);
     if (unlock_status != OK) {
         fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
         return SOMETHING_WENT_WRONG;
@@ -90,7 +95,13 @@ int queue_get(queue_t* queue, int* value) {
     }
     queue->get_attempts++;
     assert(queue->count >= 0);
+
+    int unlock_status;
     if (queue->count == 0) {
+        unlock_status = pthread_spin_unlock(&spinlock);
+        if (unlock_status != OK) {
+            fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
+        }
         return SOMETHING_WENT_WRONG;
     }
 
@@ -101,7 +112,7 @@ int queue_get(queue_t* queue, int* value) {
 
     --queue->count;
     ++queue->get_count;
-    int unlock_status = pthread_spin_unlock(&spinlock);
+    unlock_status = pthread_spin_unlock(&spinlock);
     if (unlock_status != OK) {
         fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
         return SOMETHING_WENT_WRONG;
@@ -134,6 +145,7 @@ void queue_print_stats(queue_t* queue) {
         queue->count,
         queue->add_attempts, queue->get_attempts, queue->add_attempts - queue->get_attempts,
         queue->add_count, queue->get_count, queue->add_count - queue->get_count);
+    int unlock_status = pthread_spin_unlock(&spinlock);
     if (unlock_status != OK) {
         fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
         return SOMETHING_WENT_WRONG;
