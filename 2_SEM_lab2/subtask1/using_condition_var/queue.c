@@ -5,6 +5,8 @@
 #include "queue.h"
 
 pthread_mutex_t mutex;
+pthread_cond_t is_not_empty_queue;
+pthread_cond_t is_not_full_queue;
 
 void* qmonitor(void *arg) {
     queue_t *queue = (queue_t*) arg;
@@ -23,6 +25,17 @@ queue_t* queue_init(int max_count) {
         fprintf(stderr, "Error during initializing of mutex\n");
         abort();
     }
+    int cond_var_initialization_status = pthread_cond_init(&is_not_empty_queue, NULL);
+    if (cond_var_initialization_status != OK) {
+        fprintf(stderr, "Error during initializing of cond_var");
+        abort();
+    }
+    cond_var_initialization_status = pthread_cond_init(&is_not_full_queue, NULL);
+    if (cond_var_initialization_status != OK) {
+        fprintf(stderr, "Error during initializing of cond_var");
+        abort();
+    }
+
     queue_t* queue = (queue_t*) malloc(sizeof(queue_t));
     if (queue == NULL) {
         perror("Error during malloc()");
@@ -46,26 +59,21 @@ queue_t* queue_init(int max_count) {
 }
 
 int queue_add(queue_t* queue, int value) {
-    int lock_status = pthread_mutex_lock(&mutex);
-    if (lock_status != OK) {
-        fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
-        return SOMETHING_WENT_WRONG;
-    }
     ++queue->add_attempts;
-    assert(queue->count <= queue->max_count);
-    int unlock_status;
-    if (queue->count == queue->max_count) {
-        unlock_status = pthread_mutex_unlock(&mutex);
-        if (unlock_status != OK) {
-            fprintf(stderr, "Error during pthread_mutex_unlock(); error code: %d\n", unlock_status);
-        }
-        return SOMETHING_WENT_WRONG;
+    while (queue->count == queue->max_count) {
+        pthread_cond_wait(&is_not_full_queue, &mutex);
     }
 
     qnode_t* new_element = (qnode_t*) malloc(sizeof(qnode_t));
     if (new_element == NULL) {
         perror("Error during malloc()");
         abort();
+    }
+
+    int lock_status = pthread_mutex_lock(&mutex);
+    if (lock_status != OK) {
+        fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
+        return SOMETHING_WENT_WRONG;
     }
 
     new_element->value = value;
@@ -79,7 +87,12 @@ int queue_add(queue_t* queue, int value) {
     }
     ++queue->count;
     ++queue->add_count;
-    unlock_status = pthread_mutex_unlock(&mutex);
+    int signal_status = pthread_cond_signal(&is_not_empty_queue);
+    if (signal_status != OK) {
+        fprintf(stderr, "Error during pthread_cond_signal(); error code: %d\n", signal_status);
+        return SOMETHING_WENT_WRONG;
+    }
+    int unlock_status = pthread_mutex_unlock(&mutex);
     if (unlock_status != OK) {
         fprintf(stderr, "Error during pthread_mutex_unlock(); error code: %d\n", unlock_status);
         return SOMETHING_WENT_WRONG;
@@ -88,20 +101,15 @@ int queue_add(queue_t* queue, int value) {
 }
 
 int queue_get(queue_t* queue, int* value) {
+    queue->get_attempts++;
+
+    while (queue->count == 0) {
+        pthread_cond_wait(&is_not_empty_queue, &mutex);
+    }
+
     int lock_status = pthread_mutex_lock(&mutex);
     if (lock_status != OK) {
         fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
-        return SOMETHING_WENT_WRONG;
-    }
-    queue->get_attempts++;
-    assert(queue->count >= 0);
-
-    int unlock_status;
-    if (queue->count == 0) {
-        unlock_status = pthread_mutex_unlock(&mutex);
-        if (unlock_status != OK) {
-            fprintf(stderr, "Error during pthread_mutex_unlock(); error code: %d\n", unlock_status);
-        }
         return SOMETHING_WENT_WRONG;
     }
 
@@ -112,7 +120,12 @@ int queue_get(queue_t* queue, int* value) {
 
     --queue->count;
     ++queue->get_count;
-    unlock_status = pthread_mutex_unlock(&mutex);
+    int signal_status = pthread_cond_signal(&is_not_full_queue);
+    if (signal_status != OK) {
+        fprintf(stderr, "Error during pthread_cond_signal(); error code: %d\n", signal_status);
+        return SOMETHING_WENT_WRONG;
+    }
+    int unlock_status = pthread_mutex_unlock(&mutex);
     if (unlock_status != OK) {
         fprintf(stderr, "Error during pthread_mutex_unlock(); error code: %d\n", unlock_status);
         return SOMETHING_WENT_WRONG;
@@ -132,6 +145,14 @@ void queue_destroy(queue_t* queue) {
     int destroy_status = pthread_mutex_destroy(&mutex);
     if (destroy_status != OK) {
         fprintf(stderr, "Error during pthread_mutex_destroy(); error code: %d\n", destroy_status);
+    }
+    destroy_status = pthread_cond_destroy(&is_not_empty_queue);
+    if (destroy_status != OK) {
+        fprintf(stderr, "Error during pthread_cond_destroy(); error code: %d\n", destroy_status);
+    }
+    destroy_status = pthread_cond_destroy(&is_not_full_queue);
+    if (destroy_status != OK) {
+        fprintf(stderr, "Error during pthread_cond_destroy(); error code: %d\n", destroy_status);
     }
 }
 

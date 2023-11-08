@@ -139,7 +139,7 @@ void queue_print_stats(queue_t* queue) {
     int lock_status = pthread_spin_lock(&spinlock);
     if (lock_status != OK) {
         fprintf(stderr, "Error during pthread_spin_lock(); error code: %d\n", lock_status);
-        return SOMETHING_WENT_WRONG;
+        abort();
     }
     printf("[QUEUE STATS]: [CURR SIZE: %d]; [ATTEMPTS: (%ld %ld %ld)]; [COUNTS: (%ld %ld %ld)]\n",
         queue->count,
@@ -148,6 +148,6 @@ void queue_print_stats(queue_t* queue) {
     int unlock_status = pthread_spin_unlock(&spinlock);
     if (unlock_status != OK) {
         fprintf(stderr, "Error during pthread_spin_unlock(); error code: %d\n", unlock_status);
-        return SOMETHING_WENT_WRONG;
+        abort();
     }
 }
