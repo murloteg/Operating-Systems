@@ -46,6 +46,12 @@ queue_t* queue_init(int max_count) {
 }
 
 int queue_add(queue_t* queue, int value) {
+    qnode_t* new_element = (qnode_t*) malloc(sizeof(qnode_t));
+    if (new_element == NULL) {
+        perror("Error during malloc()");
+        abort();
+    }
+
     int lock_status = pthread_mutex_lock(&mutex);
     if (lock_status != OK) {
         fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
@@ -55,17 +61,12 @@ int queue_add(queue_t* queue, int value) {
     assert(queue->count <= queue->max_count);
     int unlock_status;
     if (queue->count == queue->max_count) {
+        free(new_element);
         unlock_status = pthread_mutex_unlock(&mutex);
         if (unlock_status != OK) {
             fprintf(stderr, "Error during pthread_mutex_unlock(); error code: %d\n", unlock_status);
         }
         return SOMETHING_WENT_WRONG;
-    }
-
-    qnode_t* new_element = (qnode_t*) malloc(sizeof(qnode_t));
-    if (new_element == NULL) {
-        perror("Error during malloc()");
-        abort();
     }
 
     new_element->value = value;
