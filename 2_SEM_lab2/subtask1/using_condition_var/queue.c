@@ -64,7 +64,6 @@ int queue_add(queue_t* queue, int value) {
         fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
         return SOMETHING_WENT_WRONG;
     }
-
     ++queue->add_attempts;
     while (queue->count == queue->max_count) {
         pthread_cond_wait(&is_not_full_queue, &mutex);
@@ -106,7 +105,6 @@ int queue_get(queue_t* queue, int* value) {
         fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
         return SOMETHING_WENT_WRONG;
     }
-
     queue->get_attempts++;
     while (queue->count == 0) {
         pthread_cond_wait(&is_not_empty_queue, &mutex);
