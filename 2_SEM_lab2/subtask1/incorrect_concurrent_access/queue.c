@@ -42,6 +42,9 @@ int queue_add(queue_t* queue, int value) {
     ++queue->add_attempts;
     assert(queue->count <= queue->max_count);
     if (queue->count == queue->max_count) {
+        struct timespec queue_is_full_timestamp;
+        clock_gettime (CLOCK_REALTIME, &queue_is_full_timestamp);
+        fprintf(stdout, "Queue is full! Time: [%ld s., %ld ns]\n", queue_is_full_timestamp.tv_sec / 1000000000, queue_is_full_timestamp.tv_nsec);
         return SOMETHING_WENT_WRONG;
     }
 
@@ -90,7 +93,6 @@ void queue_destroy(queue_t* queue) {
             queue->first = next;
         }
     }
-    // TODO
     free(queue);
 }
 

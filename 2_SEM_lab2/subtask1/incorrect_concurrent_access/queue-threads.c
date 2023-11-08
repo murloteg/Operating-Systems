@@ -78,6 +78,9 @@ status_t execute_program() {
         fprintf(stderr, "main: pthread_create() for reader failed with code: %d\n", creation_status);
         return SOMETHING_WENT_WRONG;
     }
+    struct timespec reader_start_time;
+    clock_gettime (CLOCK_REALTIME, &reader_start_time);
+    fprintf(stdout, "Writer TIME: [%ld s., %ld ns]\n", reader_start_time.tv_sec / 1000000000, reader_start_time.tv_nsec);
 
     int scheduling_status = sched_yield();
     if (scheduling_status != OK) {
@@ -91,6 +94,9 @@ status_t execute_program() {
         fprintf(stderr, "main: pthread_create() for writer failed with code: %d\n", creation_status);
         return SOMETHING_WENT_WRONG;
     }
+    struct timespec writer_start_time;
+    clock_gettime (CLOCK_REALTIME, &writer_start_time);
+    fprintf(stdout, "Writer TIME: [%ld s., %ld ns]\n", writer_start_time.tv_sec / 1000000000, writer_start_time.tv_nsec);
 
     void* reader_return_value = NULL;
     int reader_join_status = pthread_join(reader_tid, &reader_return_value);
@@ -106,7 +112,6 @@ status_t execute_program() {
         return SOMETHING_WENT_WRONG;
     }
     queue_destroy(queue);
-    // TODO: почему при больших размерах быстро падает очередь?
     return OK;
 }
 
