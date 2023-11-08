@@ -59,6 +59,12 @@ queue_t* queue_init(int max_count) {
 }
 
 int queue_add(queue_t* queue, int value) {
+    int lock_status = pthread_mutex_lock(&mutex);
+    if (lock_status != OK) {
+        fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
+        return SOMETHING_WENT_WRONG;
+    }
+
     ++queue->add_attempts;
     while (queue->count == queue->max_count) {
         pthread_cond_wait(&is_not_full_queue, &mutex);
@@ -68,12 +74,6 @@ int queue_add(queue_t* queue, int value) {
     if (new_element == NULL) {
         perror("Error during malloc()");
         abort();
-    }
-
-    int lock_status = pthread_mutex_lock(&mutex);
-    if (lock_status != OK) {
-        fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
-        return SOMETHING_WENT_WRONG;
     }
 
     new_element->value = value;
@@ -101,16 +101,15 @@ int queue_add(queue_t* queue, int value) {
 }
 
 int queue_get(queue_t* queue, int* value) {
-    queue->get_attempts++;
-
-    while (queue->count == 0) {
-        pthread_cond_wait(&is_not_empty_queue, &mutex);
-    }
-
     int lock_status = pthread_mutex_lock(&mutex);
     if (lock_status != OK) {
         fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
         return SOMETHING_WENT_WRONG;
+    }
+
+    queue->get_attempts++;
+    while (queue->count == 0) {
+        pthread_cond_wait(&is_not_empty_queue, &mutex);
     }
 
     qnode_t* tmp = queue->first;
