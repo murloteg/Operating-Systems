@@ -2,7 +2,7 @@
 #define INC_2_SEM_LAB2_UTILS_H
 
 enum util_consts {
-    QUEUE_SIZE = 1000,
+    QUEUE_SIZE = 1000000,
     TIME_TO_SLEEP_IN_SEC = 1
 };
 
