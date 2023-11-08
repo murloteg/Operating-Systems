@@ -15,6 +15,8 @@
 #define RED "\033[41m"
 #define NOCOLOR "\033[0m"
 
+struct timespec program_start_time;
+
 void set_cpu(int n) {
     cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
@@ -61,6 +63,9 @@ void* writer(void* arg) {
 	while (true) {
 		status_t adding_status = queue_add(queue, value);
 		if (adding_status != OK) {
+            struct timespec queue_is_full_timestamp;
+            clock_gettime (CLOCK_REALTIME, &queue_is_full_timestamp);
+            fprintf(stdout, "Queue is full! TIME: [%lf s.]\n", (queue_is_full_timestamp.tv_sec - program_start_time.tv_sec) + 0.000000001 * (queue_is_full_timestamp.tv_nsec - program_start_time.tv_nsec));
             continue;
         }
         ++value;
@@ -70,6 +75,7 @@ void* writer(void* arg) {
 
 status_t execute_program() {
     printf("MAIN-THREAD [%d %d %d]\n\n", getpid(), getppid(), gettid());
+    clock_gettime (CLOCK_REALTIME, &program_start_time);
 
     queue_t* queue = queue_init(QUEUE_SIZE);
     pthread_t reader_tid;
@@ -80,7 +86,7 @@ status_t execute_program() {
     }
     struct timespec reader_start_time;
     clock_gettime (CLOCK_REALTIME, &reader_start_time);
-    fprintf(stdout, "Writer TIME: [%ld s., %ld ns]\n", reader_start_time.tv_sec / 1000000000, reader_start_time.tv_nsec);
+    fprintf(stdout, "Reader TIME: [%lf s.]\n", (reader_start_time.tv_sec - program_start_time.tv_sec) + 0.000000001 * (reader_start_time.tv_nsec - program_start_time.tv_nsec));
 
     int scheduling_status = sched_yield();
     if (scheduling_status != OK) {
@@ -96,7 +102,7 @@ status_t execute_program() {
     }
     struct timespec writer_start_time;
     clock_gettime (CLOCK_REALTIME, &writer_start_time);
-    fprintf(stdout, "Writer TIME: [%ld s., %ld ns]\n", writer_start_time.tv_sec / 1000000000, writer_start_time.tv_nsec);
+    fprintf(stdout, "Writer TIME: [%lf s.]\n", (writer_start_time.tv_sec - program_start_time.tv_sec) + 0.000000001 * (writer_start_time.tv_nsec - program_start_time.tv_nsec));
 
     void* reader_return_value = NULL;
     int reader_join_status = pthread_join(reader_tid, &reader_return_value);
