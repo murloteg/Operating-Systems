@@ -103,7 +103,14 @@ int queue_get(queue_t* queue, int* value) {
         if (unlock_status != OK) {
             fprintf(stderr, "Error during pthread_mutex_unlock(); error code: %d\n", unlock_status);
         }
-        return SOMETHING_WENT_WRONG;
+        while (queue->count == 0) {
+            usleep(100);
+        }
+        lock_status = pthread_mutex_lock(&mutex);
+        if (lock_status != OK) {
+            fprintf(stderr, "Error during pthread_mutex_lock(); error code: %d\n", lock_status);
+            return SOMETHING_WENT_WRONG;
+        }
     }
 
     qnode_t* tmp = queue->first;
