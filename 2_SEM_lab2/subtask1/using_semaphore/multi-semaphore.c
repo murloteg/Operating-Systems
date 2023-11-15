@@ -97,8 +97,15 @@ status_t execute_program() {
         abort();
     }
 
+    pthread_t stub_tid;
+    status_t creation_status = pthread_create(&stub_tid, NULL, stub, queue);
+    if (creation_status != OK) {
+        fprintf(stderr, "main: pthread_create() for stub failed with code: %d\n", creation_status);
+        return SOMETHING_WENT_WRONG;
+    }
+
     pthread_t reader_tid;
-    status_t creation_status = pthread_create(&reader_tid, NULL, reader, queue);
+    creation_status = pthread_create(&reader_tid, NULL, reader, queue);
     if (creation_status != OK) {
         fprintf(stderr, "main: pthread_create() for reader failed with code: %d\n", creation_status);
         return SOMETHING_WENT_WRONG;
@@ -114,6 +121,13 @@ status_t execute_program() {
     creation_status = pthread_create(&writer_tid, NULL, writer, queue);
     if (creation_status != OK) {
         fprintf(stderr, "main: pthread_create() for writer failed with code: %d\n", creation_status);
+        return SOMETHING_WENT_WRONG;
+    }
+
+    void* stub_return_value = NULL;
+    int stub_join_status = pthread_join(stub_tid, &stub_return_value);
+    if (stub_join_status != OK) {
+        fprintf(stderr, "Error during pthread_join() for stub thread. Error code: %d\n", stub_join_status);
         return SOMETHING_WENT_WRONG;
     }
 

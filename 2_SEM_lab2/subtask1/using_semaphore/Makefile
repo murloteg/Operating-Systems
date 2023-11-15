@@ -5,7 +5,7 @@ TARGET_2 = queue-threads
 SRCS_2 = queue.c queue-threads.c
 
 TARGET_3 = multi-semaphore
-SRCS_3 = queue.c queue-threads.c multi-semaphore.c
+SRCS_3 = queue.c multi-semaphore.c
 
 CC=gcc
 RM=rm
