@@ -13,7 +13,6 @@
 typedef struct storage_node {
     char* value;
     struct storage_node* next;
-    struct storage_node* previous;
     pthread_mutex_t sync_primitive;
 } storage_node_t;
 

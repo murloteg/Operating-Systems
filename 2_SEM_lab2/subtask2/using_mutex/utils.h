@@ -2,8 +2,8 @@
 #define INC_2_SEM_LAB2_UTILS_H
 
 enum util_consts {
-    STORAGE_SIZE = 10,
-    MAX_LENGTH_OF_STRING = 10
+    STORAGE_SIZE = 100,
+    MAX_LENGTH_OF_STRING = 100
 };
 
 typedef enum statuses {

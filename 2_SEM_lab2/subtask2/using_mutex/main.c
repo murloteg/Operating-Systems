@@ -127,104 +127,58 @@ void increase_swap_counter() {
     }
 }
 
-void swap_storage_nodes(storage_node_t* left_node, storage_node_t* right_node, storage_t* storage) {
-    storage_node_t* previous_node = left_node->previous;
-    storage_node_t* next_node = right_node->next;
-    if (previous_node == NULL && next_node != NULL) {
-        right_node->previous = previous_node;
-        right_node->next = left_node;
-        left_node->previous = right_node;
-        left_node->next = next_node;
-        next_node->previous = left_node;
-        storage->first = right_node;
-        return;
-    }
-    if (previous_node != NULL && next_node == NULL) {
+void swap_storage_nodes(storage_node_t* previous_node, storage_node_t* left_node, storage_node_t* right_node, storage_t* storage) {
+    if (previous_node != NULL) {
+        int previous_node_lock = pthread_mutex_lock(&previous_node->sync_primitive);
+        if (previous_node_lock != OK) {
+            fprintf(stderr, "Cannot lock sync primitive!\n");
+            return;
+        }
         previous_node->next = right_node;
-        right_node->previous = previous_node;
-        right_node->next = left_node;
-        left_node->previous = right_node;
-        left_node->next = next_node;
-        storage->last = left_node;
-        return;
+        int previous_node_unlock = pthread_mutex_unlock(&previous_node->sync_primitive);
+        if (previous_node_unlock != OK) {
+            fprintf(stderr, "Cannot unlock sync primitive!\n");
+            return;
+        }
     }
-
-    int previous_node_lock = pthread_mutex_lock(&previous_node->sync_primitive);
-    int next_node_lock = pthread_mutex_lock(&next_node->sync_primitive);
-    if (previous_node_lock != OK || next_node_lock != OK) {
-        fprintf(stderr, "Cannot lock sync primitive!\n");
-        return;
-    }
-    previous_node->next = right_node;
-    right_node->previous = previous_node;
+    storage_node_t* next_node = right_node->next;
     right_node->next = left_node;
-    next_node->previous = left_node;
     left_node->next = next_node;
-    left_node->previous = right_node;
-
-    int next_node_unlock = pthread_mutex_unlock(&next_node->sync_primitive);
-    int previous_node_unlock = pthread_mutex_unlock(&previous_node->sync_primitive);
-    if (previous_node_unlock != OK || next_node_unlock != OK) {
-        fprintf(stderr, "Cannot unlock sync primitive!\n");
-        return;
-    }
 }
 
 void* increase_length_finder(void* arg) {
     storage_t* storage = (storage_t*) arg;
     int count = storage->count;
     while (true) {
-//        printf("Number of swaps: %ld\n", successful_swap_counter);
         for (int i = 0; i < (count - 1); ++i) {
             storage_node_t* left_node = peek_in_storage_by_index(storage, i);
-            storage_node_t* right_node = peek_in_storage_by_index(storage, i + 1);
-            int left_node_lock, right_node_lock;
-            if (left_node < right_node) {
-                left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
-                right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
-            } else {
-                right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
-                left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
+            if (left_node == NULL) {
+                continue;
             }
-//            int left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
-//            int right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
+            storage_node_t* right_node = left_node->next;
 
+            int left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
+            int right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
             if (left_node_lock != OK || right_node_lock != OK) {
                 fprintf(stderr, "Cannot lock sync primitive!\n");
                 abort();
             }
+
             if (strlen(left_node->value) > strlen(right_node->value)) {
-                swap_storage_nodes(left_node, right_node, storage);
+                storage_node_t* previous_node = peek_in_storage_by_index(storage, i - 1);
+                swap_storage_nodes(previous_node, left_node, right_node, storage);
                 increase_swap_counter();
             }
 
-            int right_node_unlock, left_node_unlock;
-            if (left_node < right_node) {
-                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-            } else {
-                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-            }
-
-//            if (left_node < right_node) {
-//                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-//                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-//            } else {
-//                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-//                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-//            }
-
-//            int right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-//            int left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-
+            int right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
+            int left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
             if (left_node_unlock != OK || right_node_unlock != OK) {
                 fprintf(stderr, "Cannot unlock sync primitive!\n");
                 abort();
             }
         }
         ++increase_length_counter;
-        /* [DEBUG] */
+        // [DEBUG]
 //        print_storage(storage);
     }
     return NULL;
@@ -234,57 +188,35 @@ void* decrease_length_finder(void* arg) {
     storage_t* storage = (storage_t*) arg;
     int count = storage->count;
     while (true) {
-//        printf("Number of swaps: %ld\n", successful_swap_counter);
         for (int i = 0; i < (count - 1); ++i) {
             storage_node_t* left_node = peek_in_storage_by_index(storage, i);
-            storage_node_t* right_node = peek_in_storage_by_index(storage, i + 1);
-
-            int left_node_lock, right_node_lock;
-            if (left_node < right_node) {
-                left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
-                right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
-            } else {
-                right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
-                left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
+            if (left_node == NULL) {
+                continue;
             }
-//            int left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
-//            int right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
+            storage_node_t* right_node = left_node->next;
+
+            int left_node_lock = pthread_mutex_lock(&left_node->sync_primitive);
+            int right_node_lock = pthread_mutex_lock(&right_node->sync_primitive);
             if (left_node_lock != OK || right_node_lock != OK) {
                 fprintf(stderr, "Cannot lock sync primitive!\n");
                 abort();
             }
+
             if (strlen(left_node->value) < strlen(right_node->value)) {
-                swap_storage_nodes(left_node, right_node, storage);
+                storage_node_t* previous_node = peek_in_storage_by_index(storage, i - 1);
+                swap_storage_nodes(previous_node, left_node, right_node, storage);
                 increase_swap_counter();
             }
 
-            int right_node_unlock, left_node_unlock;
-            if (left_node < right_node) {
-                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-            } else {
-                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-            }
-
-//            if (left_node < right_node) {
-//                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-//                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-//            } else {
-//                right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-//                left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-//            }
-
-//            int right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
-//            int left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
-
+            int right_node_unlock = pthread_mutex_unlock(&right_node->sync_primitive);
+            int left_node_unlock = pthread_mutex_unlock(&left_node->sync_primitive);
             if (left_node_unlock != OK || right_node_unlock != OK) {
                 fprintf(stderr, "Cannot unlock sync primitive!\n");
                 abort();
             }
         }
         ++decrease_length_counter;
-        /* [DEBUG] */
+        // [DEBUG]
 //        print_storage(storage);
     }
     return NULL;
@@ -298,12 +230,12 @@ status_t execute_program() {
         return SOMETHING_WENT_WRONG;
     }
 
-//    status_t put_values_status = put_values_with_different_length_in_storage(storage, 10);
+//    status_t put_values_status = put_values_with_different_length_in_storage(storage, STORAGE_SIZE);
 //    if (put_values_status != OK) {
 //        return SOMETHING_WENT_WRONG;
 //    }
 
-    status_t put_values_status = put_values_with_random_length_in_storage(storage, 10);
+    status_t put_values_status = put_values_with_random_length_in_storage(storage, STORAGE_SIZE);
     if (put_values_status != OK) {
         return SOMETHING_WENT_WRONG;
     }
@@ -312,25 +244,41 @@ status_t execute_program() {
     pthread_t first_thread;
     int first_creation_status = pthread_create(&first_thread, NULL, increase_length_finder, storage);
     if (first_creation_status != OK) {
-        // TODO
+        fprintf(stderr, "Error during pthread_create(); error code: %d\n", first_creation_status);
+        return SOMETHING_WENT_WRONG;
     }
 
     pthread_t second_thread;
     int second_creation_status = pthread_create(&second_thread, NULL, decrease_length_finder, storage);
     if (second_creation_status != OK) {
-        // TODO
+        fprintf(stderr, "Error during pthread_create(); error code: %d\n", second_creation_status);
+        return SOMETHING_WENT_WRONG;
     }
 
     pthread_t spectator_thread;
     int spectator_creation_status = pthread_create(&spectator_thread, NULL, spectator_thread_routine, NULL);
     if (spectator_creation_status != OK) {
-        // TODO
+        fprintf(stderr, "Error during pthread_create(); error code: %d\n", spectator_creation_status);
+        return SOMETHING_WENT_WRONG;
     }
 
-    pthread_join(first_thread, NULL); // TODO
-    pthread_join(second_thread, NULL); // TODO
-    pthread_join(spectator_thread, NULL); // TODO
+    int first_join_status = pthread_join(first_thread, NULL);
+    if (first_join_status != OK) {
+        fprintf(stderr, "Error during pthread_join()\n");
+        return SOMETHING_WENT_WRONG;
+    }
 
+    int second_join_status = pthread_join(second_thread, NULL);
+    if (second_join_status != OK) {
+        fprintf(stderr, "Error during pthread_join()\n");
+        return SOMETHING_WENT_WRONG;
+    }
+
+    int spectator_join_status = pthread_join(spectator_thread, NULL);
+    if (spectator_join_status != OK) {
+        fprintf(stderr, "Error during pthread_join()\n");
+        return SOMETHING_WENT_WRONG;
+    }
     storage_destroy(storage);
     return OK;
 }

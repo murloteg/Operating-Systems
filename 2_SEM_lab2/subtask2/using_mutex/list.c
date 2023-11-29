@@ -37,9 +37,9 @@ int storage_add(storage_t* storage, char* value) {
         abort();
     }
 
-    new_element->value = value;
+    new_element->value = strdup(value);
+    free(value);
     new_element->next = NULL;
-    new_element->previous = NULL;
     int sync_primitive_init_status = pthread_mutex_init(&new_element->sync_primitive, NULL);
     if (sync_primitive_init_status != OK) {
         fprintf(stderr, "Error during initialize sync primitive\n");
@@ -50,7 +50,6 @@ int storage_add(storage_t* storage, char* value) {
         storage->first = storage->last = new_element;
     } else {
         storage->last->next = new_element;
-        new_element->previous = storage->last;
         storage->last = storage->last->next;
     }
     ++storage->count;
@@ -59,15 +58,15 @@ int storage_add(storage_t* storage, char* value) {
 
 storage_node_t* peek_in_storage_by_index(storage_t* storage, int index) {
     storage_node_t* node;
-    pthread_mutex_lock(&access_sync_primitive); // TODO
-    if (storage->count == 0 || index >= storage->max_count) {
+//    pthread_mutex_lock(&access_sync_primitive); // TODO
+    if (storage->count == 0 || index >= storage->max_count || index < 0) {
         return NULL;
     }
     node = storage->first;
     for (int i = 0; i < index; ++i) {
         node = node->next;
     }
-    pthread_mutex_unlock(&access_sync_primitive); // TODO
+//    pthread_mutex_unlock(&access_sync_primitive); // TODO
     return node;
 }
 
