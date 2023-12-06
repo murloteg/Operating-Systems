@@ -26,7 +26,6 @@ typedef struct storage {
 storage_t* storage_init(int max_count);
 void storage_destroy(storage_t* storage);
 int storage_add(storage_t* storage, char* value);
-storage_node_t* peek_in_storage_by_index(storage_t* storage, int index);
 void print_storage(storage_t* storage);
 
 #endif //INC_2_SEM_LAB2_LIST_H

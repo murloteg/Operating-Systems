@@ -2,8 +2,6 @@
 
 #include "list.h"
 
-pthread_mutex_t access_sync_primitive;
-
 storage_t* storage_init(int max_count) {
     storage_t* storage = (storage_t*) malloc(sizeof(storage_t));
     if (storage == NULL) {
@@ -11,13 +9,10 @@ storage_t* storage_init(int max_count) {
         abort();
     }
 
-    pthread_mutex_init(&access_sync_primitive, NULL); // TODO
-
     storage->first = NULL;
     storage->last = NULL;
     storage->max_count = max_count;
     storage->count = 0;
-
     return storage;
 }
 
@@ -56,20 +51,6 @@ int storage_add(storage_t* storage, char* value) {
     return OK;
 }
 
-storage_node_t* peek_in_storage_by_index(storage_t* storage, int index) {
-    storage_node_t* node;
-//    pthread_mutex_lock(&access_sync_primitive); // TODO
-    if (storage->count == 0 || index >= storage->max_count || index < 0) {
-        return NULL;
-    }
-    node = storage->first;
-    for (int i = 0; i < index; ++i) {
-        node = node->next;
-    }
-//    pthread_mutex_unlock(&access_sync_primitive); // TODO
-    return node;
-}
-
 void storage_destroy(storage_t* storage) {
     if (storage != NULL) {
         storage_node_t* node = storage->first;
@@ -77,9 +58,9 @@ void storage_destroy(storage_t* storage) {
             free(node->value);
             int destroy_sync_primitive_status = pthread_mutex_destroy(&node->sync_primitive);
             if (destroy_sync_primitive_status != OK) {
-                // TODO;
+                fprintf(stderr, "Error during pthread_mutex_destroy(); error code: %d\n", destroy_sync_primitive_status);
+                return;
             }
-
             storage_node_t* next_node = node->next;
             free(node);
             node = next_node;
