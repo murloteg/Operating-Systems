@@ -10,7 +10,7 @@ int sync_pipe_init() {
     int pipe_fds[2];
     int pipe_res = pipe(pipe_fds);
     if (pipe_res != 0) {
-        perror("Error pipe():");
+        perror("Error: pipe():");
     }
     start_fd = pipe_fds[0];
     write_fd = pipe_fds[1];
@@ -26,9 +26,9 @@ int sync_pipe_wait() {
     char buf;
     ssize_t was_read = read(start_fd, &buf, 1);
     if (was_read < 0) {
-        perror("Error read for synchronization");
+        perror("Error: read for synchronization");
     }
-    return (int)was_read;
+    return (int) was_read;
 }
 
 void sync_pipe_notify(int num_really_created_threads) {
@@ -43,8 +43,8 @@ void sync_pipe_notify(int num_really_created_threads) {
             written = write(write_fd, start_buf, BUFSIZ);
         }
         if (written < 0) {
-            perror("Error write");
-            fprintf(stderr, "bytes_written: %ld / %d\n", bytes_written, num_really_created_threads);
+            perror("Error: write()");
+            fprintf(stderr, "Error writing: Bytes written %ld out of %d\n", bytes_written, num_really_created_threads);
         }
         else {
             bytes_written += written;

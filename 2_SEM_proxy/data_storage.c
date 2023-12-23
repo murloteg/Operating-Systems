@@ -8,7 +8,7 @@
 response_list_t* init_list() {
     response_list_t *list = (response_list_t *) calloc(1, sizeof(response_list_t));
     if (list == NULL) {
-        perror("Error: calloc returned NULL");
+        perror("Error: failed memory allocation\n");
         return NULL;
     }
     pthread_mutex_init(&list->mutex, NULL);

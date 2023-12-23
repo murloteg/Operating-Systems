@@ -29,7 +29,7 @@ enum util_consts {
     REQUIRED_NUMBER_OF_ARGS = 2,
     DECIMAL_BASE = 10,
     LISTEN_BACKLOG_NUMBER = 30,
-    TIMEOUT_IN_MILLISEC = 1200000
+    TIMEOUT_IN_MILLISEC = 300000
 };
 
 typedef struct client {
@@ -116,7 +116,7 @@ int connect_to_server_host(char* hostname, int port) {
 
     int connect_res = connect(server_sock, (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
     if (connect_res != 0) {
-        perror("connect");
+        perror("connect()");
         return -1;
     }
     return server_sock;
@@ -127,12 +127,12 @@ int create_thread(bool is_client, void *arg);
 void accept_new_client(int listen_fd) {
     int new_client_fd = accept(listen_fd, NULL, NULL);
     if (new_client_fd == -1) {
-        perror("new client accept");
+        perror("accept()");
         return;
     }
     int fcntl_res = fcntl(new_client_fd, F_SETFL, O_NONBLOCK);
     if (fcntl_res < 0) {
-        perror("make new client nonblock");
+        perror("make new client nonblock fcntl()");
         close(new_client_fd);
         return;
     }
@@ -148,10 +148,10 @@ void accept_new_client(int listen_fd) {
     client->request_index = 0;
     client->write_response_index = -1;
     client->is_stop = false;
-    fprintf(stderr, "new client with fd %d accepted\n", new_client_fd);
+    fprintf(stdout, "New client with fd %d accepted\n", new_client_fd);
     int res = create_thread(true, (void *) client);
     if (res != 0) {
-        fprintf(stderr, "error starting thread for client with fd %d\n", new_client_fd);
+        fprintf(stderr, "Error: cannot start client thread for client with fd %d\n", new_client_fd);
         close(new_client_fd);
         free(client);
     }
@@ -174,7 +174,7 @@ void disconnect_client(client_t* client) {
         return;
     }
     client->is_stop = true;
-    fprintf(stderr, "disconnecting client with fd %d...\n", client->fd);
+    fprintf(stderr, "client with fd %d disconnected\n", client->fd);
 }
 
 void add_subscriber(response_t* record, struct pollfd **poll_fds, int *poll_last_index, size_t *POLL_TABLE_SIZE) {
@@ -199,7 +199,7 @@ void disconnect_server(server_t* server) {
         return;
     }
     server->is_stop = true;
-    fprintf(stderr, "disconnect server with fd %d...\n", server->fd);
+    fprintf(stdout, "Server with fd %d disconnected\n", server->fd);
 }
 
 void init_empty_response_record(response_t* record) {
@@ -290,7 +290,7 @@ void create_response_record(char* url, size_t url_len, client_t* client, char* h
     free(host);
     int fcntl_res = fcntl(server_fd, F_SETFL, O_NONBLOCK);
     if (fcntl_res < 0) {
-        perror("make new server fd nonblock");
+        perror("make new server fd nonblock fcntl()");
         close(server_fd);
         free_response_record(new_node->record);
         disconnect_client(client);
@@ -298,7 +298,7 @@ void create_response_record(char* url, size_t url_len, client_t* client, char* h
     }
     server_t *server = (server_t *) calloc(1, sizeof(server_t));
     if (server == NULL) {
-        fprintf(stderr, "failed to alloc memory for new server\n");
+        fprintf(stderr, "Error: failed memory allocation\n");
         close(server_fd);
         free_response_record(new_node->record);
         disconnect_client(client);
@@ -310,7 +310,7 @@ void create_response_record(char* url, size_t url_len, client_t* client, char* h
     server->is_stop = false;
     int res = create_thread(false, (void *) server);
     if (res != 0) {
-        fprintf(stderr, "error starting server thread with server fd %d by client with fd %d\n", server_fd, client->fd);
+        fprintf(stderr, "Error: cannot start server thread with server fd %d by client with fd %d\n", server_fd, client->fd);
         close(server_fd);
         free(server);
         free_response_record(new_node->record);
@@ -341,12 +341,12 @@ void read_data_from_client(client_t* client, struct pollfd** poll_fds, int* poll
     char buf[BUFSIZ];
     ssize_t was_read = read(client->fd, buf, BUFSIZ);
     if (was_read < 0) {
-        fprintf(stderr, "read from client with fd %d ", client->fd);
-        perror("read");
+        fprintf(stderr, "Error: reading from client with fd %d ", client->fd);
+        perror("read()");
         disconnect_client(client);
         return;
     } else if (was_read == 0) {
-        fprintf(stderr, "client with fd %d closed connection\n", client->fd);
+        fprintf(stdout, "Client with fd %d closed connection\n", client->fd);
         disconnect_client(client);
         return;
     }
@@ -354,7 +354,7 @@ void read_data_from_client(client_t* client, struct pollfd** poll_fds, int* poll
         client->request_size = START_REQUEST_SIZE;
         client->request = (char *) calloc(client->request_size, sizeof(char));
         if (client->request == NULL) {
-            fprintf(stderr, "calloc returned NULL\n");
+            fprintf(stderr, "Error: failed memory allocation \n");
             disconnect_client(client);
             return;
         }
@@ -413,7 +413,6 @@ void read_data_from_client(client_t* client, struct pollfd** poll_fds, int* poll
     }
 }
 
-
 void write_data_to_server(server_t* server, struct pollfd* poll_fds, int* poll_last_index) {
     if (server == NULL || server->fd < 0 || server->is_stop) {
         return;
@@ -422,8 +421,8 @@ void write_data_to_server(server_t* server, struct pollfd* poll_fds, int* poll_l
                             &server->response_record->request[server->write_request_index],
                             server->response_record->request_size - server->write_request_index);
     if (written < 0) {
-        fprintf(stderr, "write to server with fd %d ", server->fd);
-        perror("write");
+        fprintf(stderr, "Error: writing to server with fd %d\n", server->fd);
+        perror("write()");
         disconnect_server(server);
         notify_subscribers(server->response_record);
         return;
@@ -441,8 +440,8 @@ void read_data_from_server(server_t *server) {
     char buf[BUFSIZ];
     ssize_t was_read = read(server->fd, buf, BUFSIZ);
     if (was_read < 0) {
-        fprintf(stderr, "read from server with fd %d ", server->fd);
-        perror("read");
+        fprintf(stderr, "Error: reading from server with fd %d\n", server->fd);
+        perror("read()");
         disconnect_server(server);
         notify_subscribers(server->response_record);
         return;
@@ -503,11 +502,11 @@ void read_data_from_server(server_t *server) {
 
 void write_data_to_client(client_t *client, struct pollfd *poll_fds, int *poll_last_index) {
     if (client == NULL || client->fd < 0 || client->is_stop) {
-        fprintf(stderr, "invalid client\n");
+        fprintf(stderr, "Error: invalid client\n");
         return;
     }
     if (client->response_record == NULL) {
-        fprintf(stderr, "client with fd %d data_storage record is NULL\n", client->fd);
+        fprintf(stdout, "Client with fd %d has an empty data storage record\n", client->fd);
         disconnect_client(client);
         return;
     }
@@ -521,8 +520,8 @@ void write_data_to_client(client_t *client, struct pollfd *poll_fds, int *poll_l
                             client->response_record->response_index - client->write_response_index);
     pthread_rwlock_unlock(&client->response_record->rw_lock);
     if (written < 0) {
-        fprintf(stderr, "write to client with fd %d ", client->fd);
-        perror("write");
+        fprintf(stderr, "Error: writing to client with fd %d: ", client->fd);
+        perror("write()");
         disconnect_client(client);
         return;
     }
@@ -546,7 +545,7 @@ static void sig_catch(int sig) {
 struct pollfd* init_poll_fds(size_t POLL_TABLE_SIZE, int *poll_last_index) {
     struct pollfd *poll_fds = (struct pollfd *) calloc(POLL_TABLE_SIZE, sizeof(struct pollfd));
     if (poll_fds == NULL) {
-        fprintf(stderr, "failed to alloc memory for poll_fds\n");
+        fprintf(stderr, "Error: failed memory allocation\n");
         return NULL;
     }
     for (int i = 0; i < POLL_TABLE_SIZE; i++) {
@@ -606,10 +605,10 @@ void* client_thread_routine(void *arg) {
             break;
         }
         if (poll_res < 0) {
-            perror("poll");
+            perror("poll()");
             break;
         } else if (poll_res == 0) {
-            fprintf(stdout, "proxy timeout\n");
+            fprintf(stderr, "Error: proxy timeout\n");
             break;
         }
         int num_handled_fd = 0;
@@ -659,7 +658,7 @@ void* client_thread_routine(void *arg) {
     free(poll_fds);
     pthread_mutex_lock(&num_threads_mutex);
     num_threads -= 1;
-    fprintf(stderr, "num_threads = %d\n", num_threads);
+    fprintf(stdout, "Number of threads = %d\n", num_threads);
     pthread_cond_signal(&stop_cond);
     pthread_mutex_unlock(&num_threads_mutex);
     pthread_exit((void *) EXIT_SUCCESS);
@@ -689,10 +688,10 @@ void* server_thread_routine(void *arg) {
             break;
         }
         if (poll_res < 0) {
-            perror("poll");
+            perror("poll()");
             break;
         } else if (poll_res == 0) {
-            fprintf(stdout, "proxy timeout\n");
+            fprintf(stderr, "Error: proxy timeout\n");
             break;
         }
         int num_handled_fd = 0;
@@ -722,14 +721,14 @@ void* server_thread_routine(void *arg) {
     }
     if (server->response_record != NULL) {
         server->response_record->server_alive = false;
-        fprintf(stderr, "server with fd %d was working with url: %s\n", server->fd, server->response_record->url);
+        fprintf(stderr, "Server with fd %d was working with URL: %s\n", server->fd, server->response_record->url);
     }
     remove_from_poll_fds(poll_fds, &poll_last_index, server->fd);
     free(server);
     free(poll_fds);
     pthread_mutex_lock(&num_threads_mutex);
     num_threads -= 1;
-    fprintf(stderr, "num_threads = %d\n", num_threads);
+    fprintf(stdout, "Number of threads = %d\n", num_threads);
     pthread_cond_signal(&stop_cond);
     pthread_mutex_unlock(&num_threads_mutex);
     pthread_exit((void *) EXIT_SUCCESS);
@@ -757,7 +756,7 @@ void clean_up();
 int init_listener(int port) {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd < 0) {
-        perror("socket");
+        perror("socket()");
         clean_up();
         abort();
     }
@@ -769,7 +768,7 @@ int init_listener(int port) {
 
     int bind_res = bind(listen_fd, (struct sockaddr *) &addr, sizeof(struct sockaddr_in));
     if (bind_res != 0) {
-        perror("bind");
+        perror("bind()");
         close(listen_fd);
         clean_up();
         abort();
@@ -777,7 +776,7 @@ int init_listener(int port) {
 
     int listen_res = listen(listen_fd, LISTEN_BACKLOG_NUMBER);
     if (listen_res == -1) {
-        perror("listen");
+        perror("listen()");
         close(listen_fd);
         clean_up();
         abort();
@@ -823,8 +822,8 @@ void destroy_poll_fds(struct pollfd *poll_fds, int *poll_last_index) {
         if (poll_fds[i].fd > 0) {
             int close_res = close(poll_fds[i].fd);
             if (close_res < 0) {
-                fprintf(stderr, "error while closing fd %d ", poll_fds[i].fd);
-                perror("close");
+                fprintf(stderr, "Error: while closing fd %d ", poll_fds[i].fd);
+                perror("close()");
             }
             poll_fds[i].fd = -1;
         }
@@ -895,7 +894,6 @@ int main(int argc, char** argv) {
     }
 
     init_stop_cond();
-
     int sync_pipe_res = sync_pipe_init();
     if (sync_pipe_res != 0) {
         fprintf(stderr, "failed to init sync pipe\n");
@@ -940,19 +938,19 @@ int main(int argc, char** argv) {
     add_fd_to_poll_fds(&poll_fds, &poll_last_index, &POLL_TABLE_SIZE, listen_fd, POLLIN);
     
     while (!is_stop) {
-        fprintf(stderr, "main: poll()\n");
+        fprintf(stdout, "In main: invoke poll()\n");
         int poll_res = poll(poll_fds, poll_last_index, TIMEOUT_IN_MILLISEC);
         if (poll_res < 0) {
-            perror("poll");
+            perror("poll()");
             break;
         } else if (poll_res == 0) {
-            fprintf(stdout, "proxy timeout\n");
+            fprintf(stderr, "Error: proxy timeout\n");
             break;
         }
         int num_handled_fd = 0;
         size_t i = 0;
         size_t prev_last_index = poll_last_index;
-        fprintf(stderr, "main: poll_res = %d\n", poll_res);
+        fprintf(stdout, "In main: poll result = %d\n", poll_res);
 
         while (num_handled_fd < poll_res && i < prev_last_index && !is_stop) {
             if (poll_fds[i].fd == READ_STOP_FD && (poll_fds[i].revents & POLLIN)) {
