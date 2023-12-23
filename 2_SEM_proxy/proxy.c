@@ -174,7 +174,7 @@ void disconnect_client(client_t* client) {
         return;
     }
     client->is_stop = true;
-    fprintf(stderr, "client with fd %d disconnected\n", client->fd);
+    fprintf(stdout, "Client with fd %d disconnected\n", client->fd);
 }
 
 void add_subscriber(response_t* record, struct pollfd **poll_fds, int *poll_last_index, size_t *POLL_TABLE_SIZE) {
@@ -721,7 +721,7 @@ void* server_thread_routine(void *arg) {
     }
     if (server->response_record != NULL) {
         server->response_record->server_alive = false;
-        fprintf(stderr, "Server with fd %d was working with URL: %s\n", server->fd, server->response_record->url);
+        fprintf(stdout, "Server with fd %d finished\n", server->fd);
     }
     remove_from_poll_fds(poll_fds, &poll_last_index, server->fd);
     free(server);
